@@ -9,6 +9,13 @@
     </ng-container>
   </div>
 
+  <div class="catan-board__debug-overlay" *ngIf="debugEnabled">
+    <div *ngIf="mouse">Mouse Position:
+      <div>x: {{ mouse.x }}</div>
+      <div>y: {{ mouse.y }}</div>
+    </div>
+  </div>
+
 
   <div class="catan-board__edit-menu" *ngIf="gameMode === 'structure'">
     <h4><u>S</u>tructure Edit Mode</h4>
@@ -32,7 +39,7 @@
         </div>
       </div>
       <button (click)="instantiateSelectedObj()">
-        {{ (selectedObjMeta.ownerId !== undefined) ? "Confirm" : "Select a color to continue" }}
+        {{ (selectedObjMeta == undefined) ? "Confirm" : "Select a color to continue" }}
       </button>
       <div>Click the current selection again to remove it.</div>
     </div>
@@ -73,9 +80,10 @@
 
   <div class="catan-board__edit-menu" *ngIf="gameMode === 'dice'">
     <h4><u>D</u>ice Mode</h4>
-    <jg-catan-dice></jg-catan-dice>
+    <ctn-catan-dice></ctn-catan-dice>
   </div>
-  <canvas #canvas
+  <canvas class="catan-board__canvas"
+          #canvas
           (click)="onMouseClick($event)"
           (mousemove)="onMouseMove($event)"></canvas>
 </div>

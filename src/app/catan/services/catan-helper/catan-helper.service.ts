@@ -167,7 +167,7 @@ export class CatanHelperService {
         break;
     }
     let rotationAmt: number = HexOffsetsToNumber.get(eOffset)!;
-    position.rot = MathConstants.NEG_PI_OVER_3 * rotationAmt;
+    position.rot = MathConstants.NEG_PI_OVER_3 * (rotationAmt - 1);
     return {pos: position, coords: coordinates};
   }
 }

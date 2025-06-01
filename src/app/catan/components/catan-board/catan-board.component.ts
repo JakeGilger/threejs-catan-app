@@ -1,4 +1,5 @@
-import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { NgIf, NgFor } from '@angular/common';
+import { AfterViewInit, Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Observable, of, ReplaySubject, Subject } from "rxjs";
 import { forkJoin } from "rxjs/internal/observable/forkJoin";
 import { map, take } from "rxjs/operators";
@@ -17,7 +18,7 @@ import { MathConstants } from "../../constants/MathConstants";
 import { ScaleConstants } from '../../constants/ScaleConstants';
 import { HexOffset, HexOffsetMap } from "../../enums/hex-offset.enum";
 
-import { hexResourceTypes, HexType, hexTypes } from "../../enums/hex-type.enum";
+import { allHexTypes, hexResourceTypes, HexType } from "../../enums/hex-type.enum";
 import { HarborType, resourceHexTypes, ResourceType, resourceTypes } from "../../enums/resource-type.enum";
 import { StructureType, StructureTypeModifiables } from "../../enums/structure-type.enum";
 
@@ -32,12 +33,17 @@ import { GameStateService } from "../../services/game-state/game-state.service";
 import { PlayerMetadata } from "../../interfaces/player-metadata";
 import { RenderService } from "../../services/render/render.service";
 import { XYPair } from '../../interfaces/xy-pair.interface';
+import { CatanDiceComponent } from '../catan-dice/catan-dice.component';
 
 type GameMode =  'structure' | 'board' | 'robber' | 'dice' | '';
 
 @Component({
   selector: 'ctn-catan-board',
-  templateUrl: './catan-board.component.html'
+  standalone: true,
+  imports: [NgIf, NgFor, CatanDiceComponent ],
+  providers: [ GameStateService, CatanHelperService, RenderService, SceneManagerService ],
+  templateUrl: './catan-board.component.html',
+  styleUrls: ['./catan-board.component.scss']
 })
 export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
@@ -64,11 +70,13 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public showMenuButtons: boolean = false;
 
+  public debugEnabled: boolean = true;
+
   /* CANVAS PROPERTIES */
   public camera!: THREE.PerspectiveCamera;
   private raycaster!: THREE.Raycaster;
 
-  private mouse!: THREE.Vector2;
+  public mouse!: THREE.Vector2;
   private mouseChanged!: boolean;
   private mouseOnPlane!: 0 | THREE.Vector3;
 
@@ -112,6 +120,9 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   /* LIFECYCLE */
   public ngOnInit() {
     this.createOceanPlane();
+    this.loadAssets().subscribe((complete) => {
+      console.log("assets loaded");
+    })
   }
 
   public ngOnDestroy() {
@@ -594,7 +605,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     });
     // leftover tiles need to be filled with extra resource hexes.
     for (let i = 0; i < numTiles % 5; i++) {
-      resourceArray.push(i);
+      resourceArray.push(HexType.DESERT);
     }
     resourceArray = CatanHelperService.shuffle(resourceArray);
 
@@ -619,9 +630,9 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  private generateHarborArray(numHarbors: number): (HarborType)[] {
+  private generateHarborArray(numHarbors: number): HarborType[] {
     // Create the array of resource types.
-    let resourceArray: (ResourceType | String)[] = [];
+    let resourceArray: HarborType[] = [];
     // Half of the harbors should be resource specific.
     let eachResourceNum = Math.floor(Math.ceil(numHarbors / 2) / resourceTypes.length);
 
@@ -936,8 +947,8 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   private loadHexes(): Observable<boolean> {
     const loadingComplete = new ReplaySubject<boolean>(1);
     this.assetRefs["hex_geom"] = new THREE.CylinderGeometry(ScaleConstants.HEX_CORNER_RADIUS, 7.8, 0.5, 6);
-    hexResourceTypes.forEach((type: HexType) => {
-      this.assetRefs["hex_" + type] = new THREE.Mesh(this.assetRefs["hex_geom"],
+    allHexTypes.forEach((type: HexType) => {
+      this.assetRefs["hex_" + type.toString()] = new THREE.Mesh(this.assetRefs["hex_geom"],
         new THREE.MeshLambertMaterial({color: MaterialColors.getHexColor(type)}));
     });
     loadingComplete.next(true);
@@ -964,7 +975,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
         numberGeometry.rotateX(MathConstants.NEG_PI_OVER_2);
         numberGeometry.scale(ScaleConstants.TOKEN_TEXT_SCALE, ScaleConstants.TOKEN_TEXT_SCALE, ScaleConstants.TOKEN_TEXT_SCALE);
 
-        geometryArray.push(numberGeometry);
+        // geometryArray.push(numberGeometry);
 
         const digitFactor = num.toString().length;
         const numPips = CatanHelperService.getNumPips(num);

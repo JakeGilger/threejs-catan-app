@@ -1,18 +1,16 @@
+@import "src/styles/flexbox.scss";
+
 .catan-board {
-  height: 100%;
-  width: 100%;
+  min-height: 90vh;
+  min-width: 90vh;
   overflow: hidden;
   font-size: 15px;
   list-style-type: none;
   background: #87ceeb;
-  canvas {
-    height: 100%;
-    width: 100%;
-  }
 }
 
 .catan-board__menu-buttons {
-  margin-left: 10px;
+  margin: 10px;
   position: absolute;
   @include flexbox();
   @include flex-wrap(nowrap);
@@ -46,4 +44,14 @@
   border: black 1px solid;
   width: 40px;
   height: 20px;
+}
+
+.catan-board__canvas {
+  height: 100vh;
+  width: 100vh;
+}
+
+.catan-board__debug-overlay {
+  position: fixed;
+  right: 10px;
 }

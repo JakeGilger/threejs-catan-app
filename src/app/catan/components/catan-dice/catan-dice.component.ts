@@ -1,7 +1,8 @@
 import { AfterViewInit, Component, OnDestroy, OnInit } from "@angular/core";
 
 @Component({
-  selector: 'jg-catan-dice',
+  selector: 'ctn-catan-dice',
+  standalone: true,
   templateUrl: './catan-dice.component.html'
 })
 export class CatanDiceComponent implements OnInit {

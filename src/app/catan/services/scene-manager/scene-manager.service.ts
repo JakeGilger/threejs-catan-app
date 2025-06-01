@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import * as THREE from "three";
-import { PlaneBufferGeometry } from "three";
 import { MathConstants } from "../../constants/MathConstants";
 import { ScaleConstants } from "../../constants/ScaleConstants";
 
@@ -49,7 +48,7 @@ export class SceneManagerService {
     const ambLight = new THREE.AmbientLight(0xffffff);
     const directionalLight = new THREE.DirectionalLight(0x888888);
     const intersectionPlane = new THREE.Mesh(
-      new PlaneBufferGeometry(ScaleConstants.INTERSECTION_PLANE_LIMIT,
+      new THREE.PlaneGeometry(ScaleConstants.INTERSECTION_PLANE_LIMIT,
         ScaleConstants.INTERSECTION_PLANE_LIMIT)
     );
     intersectionPlane.rotateX(MathConstants.NEG_PI_OVER_2);

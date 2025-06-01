@@ -1,16 +1,13 @@
 // TODO: Find a way to string enum this
 export enum HexType {
-  GRAIN,
-  WOOL,
-  LUMBER,
-  BRICK,
-  ORE,
-  DESERT,
-  OCEAN
+  GRAIN = 'GRAIN',
+  WOOL = 'WOOL',
+  LUMBER = 'LUMBER',
+  BRICK = 'BRICK',
+  ORE = 'ORE',
+  DESERT = 'DESERT',
+  OCEAN = 'OCEAN'
 }
-
-// All hex types available.
-export const hexTypes: string[] = Object.keys(HexType).filter(key => !isNaN(Number(HexType[key])));
 
 // The standard hex types that yield resources.
 export const hexResourceTypes: HexType[] = [
@@ -20,3 +17,9 @@ export const hexResourceTypes: HexType[] = [
   HexType.WOOL,
   HexType.ORE
 ];
+
+export const allHexTypes: HexType[] = [
+  ...hexResourceTypes,
+  HexType.DESERT,
+  HexType.OCEAN
+]

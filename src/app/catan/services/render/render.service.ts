@@ -50,6 +50,10 @@ export class RenderService {
     }());
   }
 
+  public getRenderer(): THREE.WebGLRenderer {
+    return this.renderer;
+  }
+
   private needsRender(component: CatanBoardComponent): boolean {
     const result = this.viewDirty || this.sceneManager.getSceneUpdated() || component.intensiveAssetsEnabled;
     this.viewDirty = false;

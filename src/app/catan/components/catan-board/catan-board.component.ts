@@ -120,9 +120,9 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   /* LIFECYCLE */
   public ngOnInit() {
     this.createOceanPlane();
-    this.loadAssets().subscribe((complete) => {
-      console.log("assets loaded");
-    })
+    this.loadAssets().pipe(take(1))
+      .subscribe((complete) => {
+      })
   }
 
   public ngOnDestroy() {
@@ -137,8 +137,8 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   public ngAfterViewInit() {
     this.setCanvasDimensions();
     this.createCamera();
-    this.initControls();
     this.render.initRenderer(this.canvas, this.canvasDimensions);
+    this.initControls();
     this.generateBoard(this.currBoardLength, this.currBoardWidth);
     this.render.startRenderLoop(this);
   }
@@ -643,7 +643,9 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     for (let i = resourceArray.length; i < numHarbors; i++) {
       resourceArray.push('3:1');
     }
-    return CatanHelperService.shuffle(resourceArray);
+    resourceArray = CatanHelperService.shuffle(resourceArray);
+    console.log(resourceArray);
+    return resourceArray;
   }
 
   /**
@@ -700,7 +702,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
                        cornerOffset: HexOffset, edgeOffset: HexOffset,
                        harborType: HarborType | undefined) {
     if (!harborType) {
-      console.log("Attempted creation of harbor with no type specified. Aborting");
+      console.log("Attempted creation of harbor with no type specified");
       return;
     }
     let refName = "harbor_" + harborType;
@@ -875,7 +877,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   private initControls() {
     // helpful link for OrbitControls properties:
     // https://threejs.org/docs/#examples/controls/OrbitControls
-    this.controls = new OrbitControls(this.camera);
+    this.controls = new OrbitControls(this.camera, this.render.getRenderer().domElement);
     // How far you can orbit vertically, upper and lower limits.
     this.controls.minPolarAngle = 0;
     this.controls.maxPolarAngle = (Math.PI * 4) / 9;

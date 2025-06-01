@@ -1,0 +1,49 @@
+.catan-board {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-size: 15px;
+  list-style-type: none;
+  background: #87ceeb;
+  canvas {
+    height: 100%;
+    width: 100%;
+  }
+}
+
+.catan-board__menu-buttons {
+  margin-left: 10px;
+  position: absolute;
+  @include flexbox();
+  @include flex-wrap(nowrap);
+  @include justify-content(center);
+}
+
+.catan-board__menu-button {
+  border-radius: 4px;
+  background-color: #fffaf0;
+  cursor: pointer;
+}
+
+.catan-board__edit-menu {
+  border-radius: 2px;
+  position: absolute;
+  margin-top: 28px;
+  margin-left: 10px;
+  padding: 5px;
+  background-color: #f5f5f5;
+  max-width: 230px;
+}
+
+.catan-board__select-container {
+  margin: 10px 0;
+  @include flexbox();
+  @include flex-wrap(nowrap);
+  @include justify-content(space-around);
+}
+
+.catan-board__select-swatch {
+  border: black 1px solid;
+  width: 40px;
+  height: 20px;
+}

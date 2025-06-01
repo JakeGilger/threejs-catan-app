@@ -1,0 +1,81 @@
+<div class="catan-board">
+  <div class="catan-board__menu-buttons">
+    <button (click)="showMenuButtons = !showMenuButtons">{{ showMenuButtons ? "Hide" : "Show Menu"}}</button>
+    <ng-container *ngIf="showMenuButtons">
+      <button (click)="toggleGameMode('structure')">S</button>
+      <button (click)="toggleGameMode('board')">B</button>
+      <button (click)="toggleGameMode('robber')">R</button>
+      <button (click)="toggleGameMode('dice')">D</button>
+    </ng-container>
+  </div>
+
+
+  <div class="catan-board__edit-menu" *ngIf="gameMode === 'structure'">
+    <h4><u>S</u>tructure Edit Mode</h4>
+    <div *ngIf="!selectedObj">
+      Select a structure or ghost to see more options.
+    </div>
+    <div *ngIf="selectedObj && selectedObjMeta">
+      <h5>Structure Options:</h5>
+      <div>Color:</div>
+      <div class="catan-board__select-container">
+        <div *ngFor="let player of gameState.players; let i = index"
+          class="catan-board__select-swatch"
+          [style.background-color]="player.color"
+          (click)=setPlayerOfSelectedStructure(player)>{{i + 1}}</div>
+      </div>
+      <div *ngIf="structureTypeModifiables">
+        <div>Structure:</div>
+        <div class="catan-board__select-container">
+          <button type="button" *ngFor="let structureType of structureTypeModifiables"
+               (click)=setSelectedStructureType(structureType)>{{structureType}}</button>
+        </div>
+      </div>
+      <button (click)="instantiateSelectedObj()">
+        {{ (selectedObjMeta.ownerId !== undefined) ? "Confirm" : "Select a color to continue" }}
+      </button>
+      <div>Click the current selection again to remove it.</div>
+    </div>
+  </div>
+
+
+  <div class="catan-board__edit-menu" *ngIf="gameMode === 'board'">
+    <h4><u>B</u>oard Edit Mode</h4>
+    <div>Length: {{currBoardLength}}
+      <button (click)="modifyLenWidth('len', -1)">-</button>
+      <button (click)="modifyLenWidth('len', 1)">+</button>
+    </div>
+    <div>Width from Center: {{currBoardWidth}}
+      <button (click)="modifyLenWidth('wid', -1)">-</button>
+      <button (click)="modifyLenWidth('wid', 1)">+</button></div>
+    <button type="button" (click)="resetBoard()">Regenerate Board</button>
+    <div *ngIf="!selectedObj">
+      Select a hex to see more options.
+    </div>
+    <div *ngIf="selectedObj">
+      <h5>Hex Options:</h5>
+      <div>Resource:</div>
+      <div class="catan-board__select-container">
+        <div *ngFor="let player of gameState.players"
+             class="catan-board__select-swatch"
+             [style.background-color]="player.color"
+             (click)=setSelectedOwner(player)></div>
+      </div>
+      <div>Click the current selection again to remove it.</div>
+    </div>
+  </div>
+
+
+  <div class="catan-board__edit-menu" *ngIf="gameMode === 'robber'">
+    <h4><u>R</u>obber Edit Mode</h4>
+    <div>Click a tile to move the robber there. Ocean tiles are not valid robber placements.</div>
+  </div>
+
+  <div class="catan-board__edit-menu" *ngIf="gameMode === 'dice'">
+    <h4><u>D</u>ice Mode</h4>
+    <jg-catan-dice></jg-catan-dice>
+  </div>
+  <canvas #canvas
+          (click)="onMouseClick($event)"
+          (mousemove)="onMouseMove($event)"></canvas>
+</div>

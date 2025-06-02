@@ -1,20 +1,30 @@
 @import "src/styles/flexbox.scss";
 
 .catan-board {
-  min-height: 90vh;
-  min-width: 90vh;
+  max-height: 100vh;
   overflow: hidden;
   font-size: 15px;
   list-style-type: none;
   background: #87ceeb;
 }
 
-.catan-board__menu-buttons {
+.catan-board__overlay {
   margin: 10px;
+  padding: 1vh;
+  border-radius: 1vh;
   position: absolute;
+  background-color: #87ceeb;
+}
+
+.catan-board__overlay-show-hide {
+  margin: 0.5vh
+}
+
+.catan-board__menu-buttons {
   @include flexbox();
   @include flex-wrap(nowrap);
   @include justify-content(center);
+  min-width: 20vh;
 }
 
 .catan-board__menu-button {
@@ -23,12 +33,15 @@
   cursor: pointer;
 }
 
+.catan-board__submenu {
+  margin-top: 1vh;
+  @include flexbox();
+  @include justify-content(center);
+}
+
 .catan-board__edit-menu {
-  border-radius: 2px;
-  position: absolute;
-  margin-top: 28px;
-  margin-left: 10px;
-  padding: 5px;
+  border-radius: 1vh;
+  padding: 1vh;
   background-color: #f5f5f5;
   max-width: 230px;
 }

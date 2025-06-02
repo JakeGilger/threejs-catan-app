@@ -180,7 +180,6 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       halfHeight: containerHeight / 2, halfWidth: containerWidth / 2 };
     } else {
       console.log("Unable to find Canvas Dimensions!");
-      
     }
   }
 

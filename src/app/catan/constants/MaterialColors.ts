@@ -29,9 +29,13 @@ export class MaterialColors {
   static readonly PLAYER_2 = 0xff8c11;
   static readonly PLAYER_3 = 0xdd1111;
   static readonly PLAYER_4 = 0x1111dd;
+  static readonly PLAYER_5 = 0x2E6F40;
+  static readonly PLAYER_6 = 0x895129;
 
   static readonly DEFAULT_PLAYER_COLORS =
-    [MaterialColors.PLAYER_1, MaterialColors.PLAYER_2, MaterialColors.PLAYER_3, MaterialColors.PLAYER_4];
+    [MaterialColors.PLAYER_1, MaterialColors.PLAYER_2,
+     MaterialColors.PLAYER_3, MaterialColors.PLAYER_4,
+     MaterialColors.PLAYER_5, MaterialColors.PLAYER_6];
 
   static getPlayerColorStrings(colors: number[]): string[] {
     return colors.map((hexInt: number) =>  '#' + ('000000' + hexInt.toString(16)).slice(-6));

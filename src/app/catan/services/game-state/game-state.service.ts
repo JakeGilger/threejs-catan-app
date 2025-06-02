@@ -14,11 +14,19 @@ export class GameStateService {
 
   constructor() {
     // Sets default players to be those in a standard game of Catan.
-    this.players = MaterialColors.getPlayerColorStrings(MaterialColors.DEFAULT_PLAYER_COLORS)
+    this.players = this.getDefaultPlayers();
+    this.structures = new Set();
+  }
+
+  setPlayers(players: PlayerMetadata[]) {
+    this.players = players;
+  }
+
+  getDefaultPlayers(): PlayerMetadata[] {
+    return MaterialColors.getPlayerColorStrings(MaterialColors.DEFAULT_PLAYER_COLORS)
       .map((color: string, index: number) => {
       return {id: index, color: color, structures: new Set()};
     });
-    this.structures = new Set();
   }
 
   addStructure(structure: StructureMetadata, player: PlayerMetadata) {

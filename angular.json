@@ -70,10 +70,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "browserTarget": "catan-app:build:production"
+              "buildTarget": "catan-app:build:production"
             },
             "development": {
-              "browserTarget": "catan-app:build:development"
+              "buildTarget": "catan-app:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -81,7 +81,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "catan-app:build"
+            "buildTarget": "catan-app:build"
           }
         },
         "test": {

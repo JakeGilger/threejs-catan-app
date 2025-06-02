@@ -38,6 +38,7 @@ type GameMode =  'structure' | 'board' | 'robber' | 'dice' | '';
 
 @Component({
     selector: 'ctn-catan-board',
+    standalone: true,
     imports: [NgIf, NgFor, CatanDiceComponent],
     providers: [GameStateService, CatanHelperService, RenderService, SceneManagerService],
     templateUrl: './catan-board.component.html',

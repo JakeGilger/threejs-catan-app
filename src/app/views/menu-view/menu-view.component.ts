@@ -1,31 +1,32 @@
-import { ChangeDetectorRef, Component, SimpleChange, SimpleChanges } from '@angular/core';
-import { FormBuilder, Validator, ValidatorFn, Validators } from '@angular/forms';
+import { NgIf } from '@angular/common';
+import { Component, inject } from '@angular/core';
+import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
 
 @Component({
     selector: 'ctn-menu-view',
-    providers: [],
     templateUrl: './menu-view.component.html',
     styleUrls: ['./menu-view.component.scss'],
-    standalone: false
+    imports: [NgIf, ReactiveFormsModule]
 })
 export class MenuViewComponent {
 
+  private formBuilder = inject(FormBuilder);
+  private router = inject(Router);
+
   mode: string | undefined;
 
-  lobbyForm = this.formBuilder.group({
-    lobbyId: null,
-    mode: 'Create'
+  lobbyForm = new FormGroup({
+    lobbyId: new FormControl(''),
+    mode: new FormControl('Create')
   });
 
-  constructor(private changeDetector: ChangeDetectorRef,
-              private formBuilder: FormBuilder,
-              private router: Router) {
+  constructor() {
                 this.lobbyForm.valueChanges.subscribe((changes: any) => {
                   this.onFormChange(changes);
                 })
-              }
+  }
 
   onFormChange(changes: any) {
     if (this.mode == changes.mode) {

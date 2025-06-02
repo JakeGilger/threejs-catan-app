@@ -12,7 +12,7 @@ export class ScaleConstants {
     // The distance offset to reach an offset corner from the center of the hex (for example, UPPER_LEFT)
     static readonly DISTANCE_OFFSET_CORNER = ScaleConstants.BASE_SCALE * (ScaleConstants.DISTANCE_BASELINE / 2) / MathConstants.SQRT_3;
 
-    static readonly TOKEN_TEXT_SCALE: number = ScaleConstants.BASE_SCALE * 0.6;
+    static readonly TOKEN_TEXT_SCALE: number = ScaleConstants.BASE_SCALE * 0.2;
     static readonly TOKEN_PIP_DISTANCE: number = ScaleConstants.BASE_SCALE * 0.55;
     static readonly HEX_CORNER_RADIUS: number = ScaleConstants.BASE_SCALE * 7;
     static readonly HEX_HEIGHT: number = ScaleConstants.BASE_SCALE * 0.55;

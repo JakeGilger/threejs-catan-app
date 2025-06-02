@@ -9,7 +9,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Font, FontLoader } from 'three/examples/jsm/loaders/FontLoader';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BufferGeometry, Material } from "three";
 
 import { mod } from "../../../helpers/js-modulo-fix";
 
@@ -200,7 +199,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
           this.selectedObj = intersects[0].object as THREE.Mesh;
 
           // Newly selected obj
-          this.selectedObjPrevMaterial = this.selectedObj.material as Material;
+          this.selectedObjPrevMaterial = this.selectedObj.material as THREE.Material;
           this.selectedObj.material = this.assetRefs["selected_material"];
           this.selectedObjMeta = this.structureMetadata.get(this.selectedObj);
           // Copy
@@ -510,10 +509,10 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
             this.createTile(HexType.OCEAN, undefined, x, y);
             let startIndex = startOffset + Math.abs(Math.min(0, y)) - 1;
             interface paramsInterface {
-              corner: HexOffset,
-              edge: HexOffset
+              corner: HexOffset | undefined,
+              edge: HexOffset | undefined
             }
-            let params: paramsInterface = { corner: HexOffset.BOTTOM, edge: HexOffset.BOTTOM};
+            let params: paramsInterface = { corner: undefined, edge: undefined};
             if (y === (width * -1) - 1) {
               // Bottom row
               if (mod(x - startIndex, 4) === 3) {
@@ -541,7 +540,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
                 params.edge = HexOffset.UPPER_LEFT;
               }
             }
-            if (params.corner !== undefined) {
+            if (params.corner && params.edge) {
               this.createHarbor(x, y, params.corner, params.edge, harborArray.pop());
             }
           }
@@ -971,12 +970,14 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       // Create a token for each possible resource number
       const resourceNumbers = CatanHelperService.getTokenNumbers().map((num: number) => {
 
-        let geometryArray: BufferGeometry[] = [];
-        let numberGeometry = new TextGeometry(num.toString(), { font: font, size: 3, depth: 0.3, curveSegments: 1 });
+        let geometryArray: THREE.BufferGeometry[] = [];
+        let numberGeometry = new THREE.ShapeGeometry(font.generateShapes(num.toString(), 9));
         numberGeometry.rotateX(MathConstants.NEG_PI_OVER_2);
+        
+        numberGeometry.translate(-2 * num.toString().length, 0.5, 0);
         numberGeometry.scale(ScaleConstants.TOKEN_TEXT_SCALE, ScaleConstants.TOKEN_TEXT_SCALE, ScaleConstants.TOKEN_TEXT_SCALE);
 
-        // geometryArray.push(numberGeometry);
+        geometryArray.push(numberGeometry);
 
         const digitFactor = num.toString().length;
         const numPips = CatanHelperService.getNumPips(num);
@@ -984,16 +985,20 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
         let tokenPip;
         for (let i = 0; i < numPips; i++) {
           tokenPip = tokenPipGeom.clone();
+          console.log(tokenPip);
           tokenPip.translate(pipOffset + (ScaleConstants.TOKEN_PIP_DISTANCE * i), 0, 0.6);
           geometryArray.push(tokenPip);
         }
 
-        let totalGeometry: BufferGeometry = BufferGeometryUtils.mergeGeometries(geometryArray);
+        let totalGeometry: THREE.BufferGeometry = BufferGeometryUtils.mergeGeometries(geometryArray);
 
         let totalMesh = new THREE.Mesh(
           totalGeometry,
           new THREE.MeshLambertMaterial({color: (num === 6 || num === 8)
               ? MaterialColors.IMPORTANT_TOKEN_TEXT : MaterialColors.TOKEN_TEXT}));
+        
+        console.log(totalGeometry);
+        
         return [ num, totalMesh ];
       });
       resourceNumbers.forEach(([num, mesh]) => {
@@ -1062,8 +1067,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     let settlementShape = [new THREE.Shape( settlementPts )];
     let settlementGeom = new THREE.ExtrudeGeometry(
       settlementShape, { bevelEnabled: false, depth: 1.4 });
-    settlementGeom.scale(0.9, 0.9, 0.9);
-    settlementGeom.translate(0, -0.3, -0.5);
+    settlementGeom.translate(0, -0.3, -0.6);
     this.assetRefs["settlement_geom"] = settlementGeom;
 
     // City
@@ -1078,13 +1082,12 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     let cityShape = [new THREE.Shape( cityPts )];
     let cityGeom = new THREE.ExtrudeGeometry(
       cityShape, { bevelEnabled: false, depth: 1.4 });
-    cityGeom.scale(0.9, 0.9, 0.9);
     cityGeom.translate(0, -0.3, -0.5);
     this.assetRefs["city_geom"] = cityGeom;
 
 
     // Road
-    this.assetRefs["road_geom"] = new THREE.BoxGeometry(0.7, 0.9, 5);
+    this.assetRefs["road_geom"] = new THREE.BoxGeometry(0.7, 0.9, 4);
 
     loadingComplete.next(true);
     loadingComplete.complete();

@@ -1,4 +1,3 @@
-// TODO: Find a way to string enum this
 export enum HexType {
   GRAIN = 'GRAIN',
   WOOL = 'WOOL',

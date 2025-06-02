@@ -603,7 +603,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     });
     // leftover tiles need to be filled with extra resource hexes.
     for (let i = 0; i < numTiles % 5; i++) {
-      resourceArray.push(HexType.DESERT);
+      resourceArray.push(hexResourceTypes[i]);
     }
     resourceArray = CatanHelperService.shuffle(resourceArray);
 

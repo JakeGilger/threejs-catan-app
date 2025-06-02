@@ -10,10 +10,10 @@ export enum HexType {
 
 // The standard hex types that yield resources.
 export const hexResourceTypes: HexType[] = [
-  HexType.BRICK,
-  HexType.LUMBER,
   HexType.GRAIN,
   HexType.WOOL,
+  HexType.BRICK,
+  HexType.LUMBER,
   HexType.ORE
 ];
 

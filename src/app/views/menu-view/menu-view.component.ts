@@ -4,10 +4,11 @@ import { Router } from '@angular/router';
 
 
 @Component({
-  selector: 'ctn-menu-view',
-  providers: [],
-  templateUrl: './menu-view.component.html',
-  styleUrls: ['./menu-view.component.scss']
+    selector: 'ctn-menu-view',
+    providers: [],
+    templateUrl: './menu-view.component.html',
+    styleUrls: ['./menu-view.component.scss'],
+    standalone: false
 })
 export class MenuViewComponent {
 

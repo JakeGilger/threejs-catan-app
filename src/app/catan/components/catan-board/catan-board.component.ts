@@ -1012,13 +1012,13 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     let harborPts = [];
     harborPts.push( new THREE.Vector2(-3.3, 0));
     harborPts.push( new THREE.Vector2(-3.2, 2));
-    harborPts.push( new THREE.Vector2(-2.4, 3));
+    harborPts.push( new THREE.Vector2(-2.4, 2.5));
     harborPts.push( new THREE.Vector2(-2, 2));
     harborPts.push( new THREE.Vector2(-1, 0.7));
     harborPts.push( new THREE.Vector2(0, 0.5));
     harborPts.push( new THREE.Vector2(1, 0.7));
     harborPts.push( new THREE.Vector2(2, 2));
-    harborPts.push( new THREE.Vector2(2.4, 3));
+    harborPts.push( new THREE.Vector2(2.4, 2.5));
     harborPts.push( new THREE.Vector2(3.2, 2));
     harborPts.push( new THREE.Vector2( 3.3, 0 ) );
     let harborShape = [new THREE.Shape( harborPts )];

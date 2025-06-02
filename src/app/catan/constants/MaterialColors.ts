@@ -7,7 +7,7 @@ export class MaterialColors {
   static readonly GRAIN_HEX = 0xa49940;
   static readonly ORE_HEX = 0x353c3e;
   static readonly WOOL_HEX = 0x4d8c2b;
-  static readonly DESERT_HEX = 0xb66f48;
+  static readonly DESERT_HEX = 0xCBBD93;
   static readonly OCEAN_HEX = 0x1c86a5;
 
   static readonly OCEAN_PLANE = 0x207fba;

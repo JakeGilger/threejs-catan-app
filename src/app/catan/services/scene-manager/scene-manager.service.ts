@@ -78,6 +78,7 @@ export class SceneManagerService {
     });
     toAdd.forEach((light) => {
       this.scene.add(light);
+      this.scene.background = (lightingScheme == 'day') ? new THREE.Color().setHex(MaterialColors.OCEAN) : null;
     });
     this.sceneUpdated = true;
   }

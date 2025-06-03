@@ -1,6 +1,5 @@
-<mat-toolbar>
-  Catan
-  <div class="flex-stretch"></div>
+
+<div class="header-button-container">
   <button mat-icon-button [mat-menu-trigger-for]="themeMenu">
     <mat-icon>{{ themeService.selectedTheme()?.icon }}</mat-icon>
   </button>
@@ -16,4 +15,4 @@
     </button>
     }
   </mat-menu>
-</mat-toolbar>
+</div>

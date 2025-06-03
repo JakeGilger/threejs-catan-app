@@ -8,9 +8,9 @@ export class MaterialColors {
   static readonly ORE = 0x353c3e;
   static readonly WOOL = 0x4d8c2b;
   static readonly DESERT = 0xCBBD93;
-  static readonly OCEAN = 0x1c86a5;
+  static readonly OCEAN = 0x42b9f5;
 
-  static readonly OCEAN_PLANE = 0x207fba;
+  static readonly OCEAN_PLANE = 0x005cbb;
 
   static readonly TOKEN_BASE = 0xdddddd;
   static readonly TOKEN_TEXT = 0x222222;
@@ -39,6 +39,10 @@ export class MaterialColors {
 
   static getPlayerColorStrings(colors: number[]): string[] {
     return colors.map((hexInt: number) =>  '#' + hexInt.toString(16));
+  }
+
+  static getColorString(color: number): string {
+    return '#' + color.toString(16);
   }
 
   static getColorForHexType(hexType: HexType): number {

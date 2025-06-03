@@ -14,7 +14,8 @@ export class ScaleConstants {
 
     static readonly TOKEN_TEXT_SCALE: number = ScaleConstants.BASE_SCALE * 0.2;
     static readonly TOKEN_PIP_DISTANCE: number = ScaleConstants.BASE_SCALE * 0.55;
-    static readonly HEX_CORNER_RADIUS: number = ScaleConstants.BASE_SCALE * 7;
+    static readonly HEX_TOP_RADIUS: number = ScaleConstants.BASE_SCALE * 7;
+    static readonly HEX_BOTTOM_RADIUS: number = ScaleConstants.BASE_SCALE * 7.9;
     static readonly HEX_HEIGHT: number = ScaleConstants.BASE_SCALE * 0.55;
 
     static readonly SHEEP_BOUNCE_HEIGHT: number = 0.5;

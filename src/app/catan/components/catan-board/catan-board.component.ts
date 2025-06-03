@@ -35,8 +35,6 @@ import { CatanDiceComponent } from '../catan-dice/catan-dice.component';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { ThemeService } from '../../services/theme/theme.service';
-import { Title } from '@angular/platform-browser';
 
 type GameMode =  'structure' | 'board' | 'robber' | 'dice' | '';
 
@@ -111,7 +109,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   private canvasDimensions!: CanvasDimensions;
 
-  public controls: any; // Actual type is THREE.OrbitControls, but compiler complains about no 'panningOptions' property.
+  public controls!: OrbitControls;
 
   // This boolean determines whether to display animated assets
   // that need a new render every animation frame.
@@ -129,10 +127,8 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public farClippingPane: number = 500;
 
-  private ThemeService = inject(ThemeService);
-
-  constructor(public gameState: GameStateService,
-    private catanHelper: CatanHelperService,
+  constructor(
+    public gameState: GameStateService,
     private render: RenderService,
     private sceneManager: SceneManagerService) { }
 
@@ -173,7 +169,10 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public onMouseMove(event: MouseEvent) {
     if (this.intensiveAssetsEnabled) {
-      this.mouse.set( ( event.clientX / this.canvasDimensions.halfWidth ) - 1, - ( event.clientY / this.canvasDimensions.halfHeight ) + 1 );
+      this.mouse.set(
+        (event.clientX / this.canvasDimensions.halfWidth) - 1,
+        -( event.clientY / this.canvasDimensions.halfHeight) + 1
+      );
       this.mouseChanged = true;
     }
   }
@@ -1021,9 +1020,16 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private loadHexes(): Observable<boolean> {
     const loadingComplete = new ReplaySubject<boolean>(1);
-    this.geomRefs.set("hex", new THREE.CylinderGeometry(ScaleConstants.HEX_CORNER_RADIUS, 7.8, 0.5, 6));
+    this.geomRefs.set("hex", new THREE.CylinderGeometry(
+      ScaleConstants.HEX_TOP_RADIUS, ScaleConstants.HEX_BOTTOM_RADIUS, 0.5, 6
+    ));
     allHexTypes.forEach((type: HexType) => {
-      this.materialRefs.set("hex_" + type.toString(), new THREE.MeshLambertMaterial({color: MaterialColors.getColorForHexType(type)}));
+      this.materialRefs.set("hex_" + type.toString(),
+      new THREE.MeshLambertMaterial({
+        color: MaterialColors.getColorForHexType(type),
+        transparent: type === HexType.OCEAN,
+        opacity: 0.5
+      }));
     });
     loadingComplete.next(true);
     loadingComplete.complete();

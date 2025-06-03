@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, Input } from '@angular/core';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,4 +21,6 @@ import { ThemeService } from 'src/app/catan/services/theme/theme.service';
 })
 export class HeaderComponent {
   protected themeService = inject(ThemeService);
+
+  @Input("minimize") minimize: boolean = false;
 }

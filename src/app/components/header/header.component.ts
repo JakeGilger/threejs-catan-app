@@ -1,5 +1,4 @@
 import { Component, inject, Input } from '@angular/core';
-import { MatToolbar } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
@@ -10,7 +9,6 @@ import { ThemeService } from 'src/app/catan/services/theme/theme.service';
   selector: 'ctn-header-component',
   standalone: true,
   imports: [
-    MatToolbar,
     MatIconModule,
     MatButtonModule,
     MatMenuModule,

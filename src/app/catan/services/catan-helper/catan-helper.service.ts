@@ -8,10 +8,16 @@ import { ScaleConstants } from "../../constants/ScaleConstants"
 export class CatanHelperService {
 
   /* Returns the resource numbers in
-   * order of probability. */
-  public static getTokenNumbers(): number[] {
+   * order of probability, highest to lowest. */
+  public static getTokenNumbersByProbability(): number[] {
     return [
       6, 8, 5, 9, 4, 10, 3, 11, 2, 12
+    ]
+  }
+
+  public static getTokenNumbers(): number[] {
+    return [
+      2, 3, 4, 5, 6, 8, 9, 10, 11, 12
     ]
   }
 

@@ -5,7 +5,7 @@
             <mat-card-title>Lobby ID: {{ lobbyId }}</mat-card-title>
         </mat-card-header>
         <div class="lobby-view__player-container">
-            @for (player of gameState.players; track $index) {
+            @for (player of gameState.players(); track $index) {
             <mat-card class="lobby-view__player-card" [style.background-color]="player.color">
                 <mat-card-subtitle>Player: {{ player.id }}</mat-card-subtitle>
             </mat-card>

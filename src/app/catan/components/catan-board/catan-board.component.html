@@ -11,17 +11,19 @@
     <mat-card class="catan-board__submenu" *ngIf="gameMode !== ''">
       <div class="catan-board__edit-menu" *ngIf="gameMode === 'structure'">
         <h4><u>S</u>tructure Edit Mode</h4>
-        <div *ngIf="!selectedObj">
+        <div *ngIf="!selectedMesh">
           Select a structure or ghost to see more options.
         </div>
-        <div *ngIf="selectedObj && selectedObjMeta">
+        <div *ngIf="selectedMesh && selectedStructureMeta">
           <h5>Structure Options:</h5>
           <div>Color:</div>
           <div class="catan-board__select-container">
-            <div *ngFor="let player of gameState.players; let i = index"
-            class="catan-board__select-swatch"
-            [style.background-color]="player.color"
-            (click)=setPlayerOfSelectedStructure(player)>{{i + 1}}</div>
+            @for (player of gameState.players(); track $index) {
+              <div
+                class="catan-board__select-swatch"
+                [style.background-color]="player.color"
+                (click)=setPlayerOfSelectedStructure(player)>{{player.id}}</div>
+            }
           </div>
           <div *ngIf="structureTypeModifiables">
             <div>Structure:</div>
@@ -31,7 +33,7 @@
             </div>
           </div>
           <button (click)="instantiateSelectedObj()">
-            {{ (selectedObjMeta == undefined) ? "Confirm" : "Select a color to continue" }}
+            {{ (selectedStructureMeta == undefined) ? "Confirm" : "Select a color to continue" }}
           </button>
           <div>Click the current selection again to remove it.</div>
         </div>
@@ -48,19 +50,35 @@
           <button (click)="modifyLenWidth('wid', 1)">+</button>
         </div>
         <button type="button" (click)="resetBoard()">Regenerate Board</button>
-        <div *ngIf="!selectedObj">
+        <div *ngIf="!selectedMesh">
           Select a hex to see more options.
         </div>
-        <div *ngIf="selectedObj">
+        <div *ngIf="selectedMesh && selectedHexMeta">
           <h5>Hex Options:</h5>
-          <div>Resource:</div>
-          <div class="catan-board__select-container">
-            <div *ngFor="let player of gameState.players"
-            class="catan-board__select-swatch"
-            [style.background-color]="player.color"
-            (click)=setSelectedOwner(player)></div>
+          <div class="catan-board__selection-debug">
+            {{ selectedHexMeta.type }},
+            {{ (selectedHexMeta.resourceNumber !== undefined) ? selectedHexMeta.resourceNumber : 'No Resource Number' }},
+            {{ (selectedHexMeta.harborType) ? selectedHexMeta.harborType + ' harbor' : 'No harbor'}}
           </div>
-          <div>Click the current selection again to remove it.</div>
+          <h5>Resource:</h5>
+          <div class="catan-board__select-container">
+            @for (hexColor of hexTypeColors; track $index) {
+              <div
+              class="catan-board__select-swatch"
+              [style.background-color]="hexColor"
+              (click)="setHexResource(selectedHexMeta, allHexTypes[$index])"
+              >{{$index}}</div>
+            }
+          </div>
+          <h5>Hex Number:</h5>
+          <div class="catan-board__select-container">
+            @for (hexNumber of hexNumbers; track $index) {
+              <div
+              class="catan-board__select-swatch"
+              >{{ hexNumber }}</div>
+            }
+          </div>
+          <div>Click the current selection again to deselect it.</div>
         </div>
       </div>
       

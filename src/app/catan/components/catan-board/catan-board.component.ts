@@ -36,6 +36,7 @@ import { CatanDiceComponent } from '../catan-dice/catan-dice.component';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { ThemeService } from '../../services/theme/theme.service';
+import { Title } from '@angular/platform-browser';
 
 type GameMode =  'structure' | 'board' | 'robber' | 'dice' | '';
 
@@ -54,23 +55,30 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public debugWindowEnabled: boolean = false;
 
-  private robberRef!: THREE.Mesh;
-
-  private hexRefs: Map<number, Map<number, any>> = new Map();
-  private hexMetadata: Map<THREE.Mesh, HexMetadata> = new Map();
+  private hexMetadataFromCoords: Map<number, Map<number, HexMetadata>> = new Map();
+  private hexMetadataFromRef: Map<THREE.Mesh, HexMetadata> = new Map();
 
   private structureRefs: Map<number, Map<number, any>> = new Map();
-  private structureMetadata: Map<THREE.Mesh, StructureMetadata> = new Map();
+  private structureMetadataFromRef: Map<THREE.Mesh, StructureMetadata> = new Map();
   public structureTypeModifiables: StructureType[] | undefined;
 
-  private assetRefs: any = {};
+  private assetRefsLoaded: boolean = false;
+  private materialRefs: Map<string, THREE.Material> = new Map();
+  private geomRefs: Map<string, THREE.BufferGeometry> = new Map();
 
   public gameMode: GameMode = '';
 
-  public selectedObj: THREE.Mesh | undefined;
-  public selectedObjMeta: StructureMetadata | undefined;
-  private selectedObjPrevMaterial: THREE.Material | undefined;
-  private selectedObjPrevMeta: StructureMetadata | undefined;
+  public selectedMesh: THREE.Mesh | undefined;
+
+  public selectedStructureMeta: StructureMetadata | undefined;
+  private selectedStructurePrevMaterial: THREE.Material | THREE.Material[] | undefined;
+  private selectedStructurePrevMeta: StructureMetadata | undefined;
+
+  public selectedHexMeta: HexMetadata | undefined;
+  private selectedHexPrevMaterial: THREE.Material | THREE.Material[] | undefined;
+  private selectedHexPrevMeta: HexMetadata | undefined;
+
+  private robberRef: THREE.Mesh | undefined;
 
   public currBoardLength: number = 5;
   public currBoardWidth: number = 2;
@@ -84,6 +92,10 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   public mouse!: THREE.Vector2;
   private mouseChanged!: boolean;
   private mouseOnPlane!: 0 | THREE.Vector3;
+
+  public hexNumbers: number[] = CatanHelperService.getTokenNumbers();
+  public allHexTypes: HexType[] = allHexTypes;
+  public hexTypeColors: string[] = allHexTypes.map((type) => { return '#' + MaterialColors.getColorForHexType(type).toString(16)});
 
   private ngUnsub: Subject<void> = new Subject();
 
@@ -126,10 +138,8 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /* LIFECYCLE */
   public ngOnInit() {
-    this.createOceanPlane();
     this.loadAssets().pipe(take(1))
-      .subscribe((complete) => {
-      })
+      .subscribe((complete) => {})
   }
 
   public ngOnDestroy() {
@@ -184,7 +194,8 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.canvas.width = containerWidth;
     this.canvasDimensions = {
       height: containerHeight, width: containerWidth,
-      halfHeight: containerHeight / 2, halfWidth: containerWidth / 2 };
+      halfHeight: containerHeight / 2, halfWidth: containerWidth / 2
+    };
     } else {
       console.log("Unable to find Canvas Dimensions!");
     }
@@ -193,57 +204,82 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   public onMouseClick(event: MouseEvent) {
     event.preventDefault();
     if (this.gameMode === 'structure') {
-      this.mouse.set( ( event.clientX / this.canvasDimensions.halfWidth ) - 1, - ( event.clientY / this.canvasDimensions.halfHeight ) + 1 );
-      this.raycaster.setFromCamera( this.mouse, this.camera );
-      let intersects = this.raycaster.intersectObjects(Array.from(this.structureMetadata.keys()));
+      let intersects = this.raycast(event, Array.from(this.structureMetadataFromRef.keys()));
 
       if ( intersects.length > 0 ) {
-        if (this.selectedObj !== intersects[0].object) {
-          if (this.selectedObj) {
-            // Previously selected obj
-            this.resetSelectedObj();
+        if (this.selectedMesh !== intersects[0].object) {
+          // If new object is selected
+          if (this.selectedMesh) {
+            // If there is an old selected object, reset it.
+            this.resetSelectedStructure();
           }
 
-          this.selectedObj = intersects[0].object as THREE.Mesh;
+          this.selectedMesh = intersects[0].object as THREE.Mesh;
 
-          // Newly selected obj
-          this.selectedObjPrevMaterial = this.selectedObj.material as THREE.Material;
-          this.selectedObj.material = this.assetRefs["selected_material"];
-          this.selectedObjMeta = this.structureMetadata.get(this.selectedObj);
-          // Copy
-          this.selectedObjPrevMeta = Object.assign({}, this.selectedObjMeta);
-          if (this.selectedObjMeta && StructureTypeModifiables.has(this.selectedObjMeta.type)) {
-            this.structureTypeModifiables = StructureTypeModifiables.get(this.selectedObjMeta.type);
+          // Backup newly selected material in "prev" and apply the "selected" material
+          this.selectedStructurePrevMaterial = this.selectedMesh.material;
+          this.selectedMesh.material = this.materialRefs.get("selected")!;
+          // Backup the newly selected object metadata in case it needs resetting.
+          this.selectedStructureMeta = this.structureMetadataFromRef.get(this.selectedMesh);
+          this.selectedStructurePrevMeta = Object.assign({}, this.selectedStructureMeta);
+          if (this.selectedStructureMeta && StructureTypeModifiables.has(this.selectedStructureMeta.type)) {
+            this.structureTypeModifiables = StructureTypeModifiables.get(this.selectedStructureMeta.type);
           } else {
             this.structureTypeModifiables = undefined;
           }
         } else {
-          // Selected obj is selected again. Deselect it.
-          if (this.selectedObj && this.selectedObjMeta) {
-            this.selectedObjMeta.instantiated = false;
-            if (this.selectedObjMeta.type === StructureType.CITY) {
+          // Selected structure has been selected again. Reset it to a settlement ghost.
+          if (this.selectedMesh && this.selectedStructureMeta) {
+            this.selectedStructureMeta.instantiated = false;
+            if (this.selectedStructureMeta.type === StructureType.CITY) {
               this.setSelectedStructureType(StructureType.SETTLEMENT);
             }
-            this.selectedObj.material = this.assetRefs["ghost_material"];
+            this.selectedMesh.material = this.materialRefs.get("ghost")!;
           }
           this.clearSelectedObj();
         }
       }
       this.sceneManager.setSceneUpdated(true);
     }
-    if (this.gameMode === 'robber') {
-      this.mouse.set( ( event.clientX / this.canvas.clientWidth ) * 2 - 1, - ( event.clientY / this.canvas.clientHeight ) * 2 + 1 );
-      this.raycaster.setFromCamera( this.mouse, this.camera );
-      let intersects = this.raycaster.intersectObjects(Array.from(this.hexMetadata.keys()));
+    if (this.gameMode === 'robber' || this.gameMode === 'board') {
+      let intersects = this.raycast(event, Array.from(this.hexMetadataFromRef.keys()));
 
       if ( intersects.length > 0 ) {
+        // Get the mesh and metadata for selected hex
         let hexMesh = intersects[0].object as THREE.Mesh;
-        let metadata = this.hexMetadata.get(hexMesh);
-        if (metadata!.type !== HexType.OCEAN) {
-          this.placeRobber(metadata!.x, metadata!.y);
+        let metadata = this.hexMetadataFromRef.get(hexMesh);
+        if (this.gameMode === 'robber') {
+          if (metadata!.type !== HexType.OCEAN) {
+            this.placeRobber(metadata!.x, metadata!.y);
+          }
+        } else if (this.selectedMesh !== hexMesh) {
+          // If new object is selected
+          if (this.selectedMesh) {
+            // If there is an old selected hex, reset it.
+            this.resetSelectedHex();
+          }
+
+          this.selectedMesh = hexMesh;
+
+          // Backup newly selected material in "prev" and apply the "selected" material
+          this.selectedHexPrevMaterial = this.selectedMesh.material;
+          this.selectedMesh.material = this.materialRefs.get("selected")!;
+          // Backup the newly selected object metadata in case it needs resetting.
+          this.selectedHexMeta = metadata;
+          this.selectedHexPrevMeta = Object.assign({}, this.selectedHexMeta);
+        } else {
+          // Selected hex has been selected again. Reset it to its previous state.
+          this.resetSelectedHex();
         }
       }
+      this.sceneManager.setSceneUpdated(true);
     }
+  }
+
+  private raycast(event: MouseEvent, objects: THREE.Object3D[]): THREE.Intersection[] {
+    this.mouse.set( ( event.clientX / this.canvas.clientWidth ) * 2 - 1, - ( event.clientY / this.canvas.clientHeight ) * 2 + 1 );
+    this.raycaster.setFromCamera( this.mouse, this.camera );
+    return this.raycaster.intersectObjects(objects);
   }
 
   public modifyLenWidth(which: 'len'|'wid', amount: number) {
@@ -276,7 +312,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       this.instantiateSelectedObj();
     }
     if (ev.keyCode >= 49 && ev.keyCode <= 52) {
-      this.setPlayerOfSelectedStructure(this.gameState.players[Number(ev.key).valueOf() - 1]);
+      this.setPlayerOfSelectedStructure(this.gameState.players()[Number(ev.key).valueOf() - 1]);
     }
     if (ev.key === 'i') {
       console.log(this.render.renderer.info);
@@ -296,42 +332,42 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public setPlayerOfSelectedStructure(player: PlayerMetadata) {
-    if (this.selectedObj && this.selectedObjMeta) {
-      this.selectedObj.material = new THREE.MeshLambertMaterial({color: player.color});
-      this.selectedObjMeta.ownerId = player.id;
+    if (this.selectedMesh && this.selectedStructureMeta) {
+      this.selectedMesh.material = new THREE.MeshLambertMaterial({color: player.color});
+      this.selectedStructureMeta.ownerId = player.id;
       this.sceneManager.setSceneUpdated(true);
     }
   }
 
   public setSelectedStructureType(structureType: StructureType) {
-    if (this.selectedObjMeta && this.selectedObj) {
-      if (structureType !== this.selectedObjMeta.type) {
+    if (this.selectedMesh && this.selectedStructureMeta) {
+      if (structureType !== this.selectedStructureMeta.type) {
         let newGeom;
         switch (structureType) {
           case "Settlement":
-            newGeom = this.assetRefs["settlement_geom"];
-            this.selectedObjMeta.type = StructureType.SETTLEMENT;
+            newGeom = this.geomRefs.get("settlement");
+            this.selectedStructureMeta.type = StructureType.SETTLEMENT;
             break;
           case "City":
-            newGeom = this.assetRefs["city_geom"];
-            this.selectedObjMeta.type = StructureType.CITY;
+            newGeom = this.geomRefs.get("city");
+            this.selectedStructureMeta.type = StructureType.CITY;
             break;
           default:
             return;
         }
         // Remove the old structure
-        if (this.selectedObj != null) {
-          this.sceneManager.removeFromScene(this.selectedObj);
-          this.structureMetadata.delete(this.selectedObj);
+        if (this.selectedMesh != null) {
+          this.sceneManager.removeFromScene(this.selectedMesh);
+          this.structureMetadataFromRef.delete(this.selectedMesh);
         }
 
         // Create the new structure
-        let position = CatanHelperService.calculateCornerPositionFromCoords(this.selectedObjMeta.x, this.selectedObjMeta.y);
-        this.selectedObj = new THREE.Mesh(
-          newGeom, this.selectedObj.material);
-        this.selectedObj.position.set(position.x, ScaleConstants.HEX_HEIGHT, position.y);
-        this.structureMetadata.set(this.selectedObj, this.selectedObjMeta);
-        this.sceneManager.addToScene(this.selectedObj);
+        let position = CatanHelperService.calculateCornerPositionFromCoords(this.selectedStructureMeta.x, this.selectedStructureMeta.y);
+        this.selectedMesh = new THREE.Mesh(
+          newGeom, this.selectedMesh.material);
+        this.selectedMesh.position.set(position.x, ScaleConstants.HEX_HEIGHT, position.y);
+        this.structureMetadataFromRef.set(this.selectedMesh, this.selectedStructureMeta);
+        this.sceneManager.addToScene(this.selectedMesh);
       }
     } else {
       console.error("No selected object metadata or selected object mesh found!");
@@ -339,50 +375,82 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public setSelectedOwner(player: PlayerMetadata) {
-    if (this.selectedObj && this.selectedObjMeta) {
-      this.selectedObjMeta.ownerId = player.id;
+    if (this.selectedMesh && this.selectedStructureMeta) {
+      this.selectedStructureMeta.ownerId = player.id;
       if (!player.material) {
         player.material = new THREE.MeshLambertMaterial({ color: player.color });
       }
-      this.selectedObj.material = player.material;
+      this.selectedMesh.material = player.material;
     }
   }
 
+  public setHexResource(hexMeta: HexMetadata, hexType: HexType) {
+    // hexMeta.type = hexType;
+    console.warn("setting hex %s to type %s", hexMeta, hexType);
+    // TODO FINISH
+  }
+
   public instantiateSelectedObj() {
-    if (this.selectedObj && this.selectedObjMeta
-      && this.selectedObjMeta.ownerId !== undefined) {
-      this.selectedObjMeta.instantiated = true;
+    if (this.selectedMesh && this.selectedStructureMeta
+      && this.selectedStructureMeta.ownerId !== 0) {
+      this.selectedStructureMeta.instantiated = true;
       this.sceneManager.setSceneUpdated(true);
       this.clearSelectedObj();
     }
   }
 
   private clearSelectedObj() {
-    this.selectedObj = undefined;
-    this.selectedObjPrevMaterial = undefined;
-    this.selectedObjMeta = undefined;
+    this.selectedMesh = undefined;
+
+    this.selectedStructureMeta = undefined;
+    this.selectedStructurePrevMeta = undefined;
+    this.selectedStructurePrevMaterial = undefined;
+
+    this.selectedHexMeta = undefined;
+    this.selectedHexPrevMeta = undefined;
+    this.selectedHexPrevMaterial = undefined;
   }
 
   // Sets the selected obj from what was stored in the "prev" obj
-  private resetSelectedObj() {
-    if (!this.selectedObjPrevMaterial || !this.selectedObjPrevMeta) {
+  private resetSelectedStructure() {
+    if (!this.selectedStructurePrevMaterial || !this.selectedStructurePrevMeta) {
       console.log("No reset data stored. Skipping selected object reset.")
       return;
     }
-    if (this.selectedObj == undefined) {
+    if (this.selectedMesh == undefined) {
       console.log("No selected object to reset. Skipping selected object reset.")
       return;
     }
-    this.selectedObj.material = this.selectedObjPrevMaterial;
-    if (this.selectedObjPrevMeta?.type) {
-      this.setSelectedStructureType(this.selectedObjPrevMeta.type);
+    this.selectedMesh.material = this.selectedStructurePrevMaterial;
+    if (this.selectedStructurePrevMeta?.type) {
+      this.setSelectedStructureType(this.selectedStructurePrevMeta.type);
     }
-    this.selectedObjMeta = this.selectedObjPrevMeta;
-    this.structureMetadata.set(this.selectedObj, this.selectedObjPrevMeta);
+    this.selectedStructureMeta = this.selectedStructurePrevMeta;
+    this.structureMetadataFromRef.set(this.selectedMesh, this.selectedStructurePrevMeta);
 
-    this.selectedObj = undefined;
-    this.selectedObjPrevMaterial = undefined;
-    this.selectedObjMeta = undefined;
+    this.selectedMesh = undefined;
+    this.selectedStructurePrevMaterial = undefined;
+    this.selectedStructureMeta = undefined;
+
+    this.sceneManager.setSceneUpdated(true);
+  }
+
+  private resetSelectedHex() {
+    if (!this.selectedHexPrevMaterial || !this.selectedHexPrevMeta) {
+      console.log("No reset data stored. Skipping selected object reset.")
+      return;
+    }
+    if (this.selectedMesh == undefined) {
+      console.log("No selected object to reset. Skipping selected object reset.")
+      return;
+    }
+    this.selectedMesh.material = this.selectedHexPrevMaterial;
+    this.selectedHexMeta = this.selectedHexPrevMeta;
+    this.hexMetadataFromRef.set(this.selectedMesh, this.selectedHexPrevMeta);
+
+    this.selectedMesh = undefined;
+    this.selectedHexPrevMaterial = undefined;
+    this.selectedHexMeta = undefined;
 
     this.sceneManager.setSceneUpdated(true);
   }
@@ -390,11 +458,13 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   /* Does not check that the given xCoord and yCoord map to a valid tile placement
    * (For example, does not check that the tile is not an ocean tile) */
   private placeRobber(xCoord: number, yCoord: number) {
-    if (this.hexRefs.has(xCoord) && this.hexRefs.get(xCoord)!.has(yCoord)) {
+    if (this.robberRef) {
       let position = CatanHelperService.calculateTilePosition(xCoord, yCoord);
       this.robberRef.position.set(position.x, 0.5, position.y);
       this.robberRef.updateMatrix();
       this.sceneManager.setSceneUpdated(true);
+    } else {
+      console.log("Tried to move robber but no robberRef found!");
     }
   }
 
@@ -405,35 +475,33 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.hideStructureGhosts();
     }
-    if (this.selectedObj) {
-      this.resetSelectedObj();
+    if (this.selectedMesh && this.selectedStructureMeta) {
+      this.resetSelectedStructure();
+    }
+    if (this.selectedMesh && this.selectedHexMeta) {
+      this.resetSelectedHex();
     }
   }
 
   public resetBoard() {
     // TODO: Look for memory leaks here
-    for (let i = this.sceneManager.getScene().children.length - 1; i >= 0; i--) {
-      if (this.sceneManager.getScene().children[i].type === "Mesh") {
-        this.sceneManager.removeFromScene(this.sceneManager.getScene().children[i]);
-      }
-    }
-    this.hexRefs = new Map();
-    this.hexMetadata = new Map();
+    this.sceneManager.resetScene();
+    this.hexMetadataFromCoords = new Map();
+    this.hexMetadataFromRef = new Map();
     this.structureRefs = new Map();
-    this.structureMetadata = new Map();
-    this.createOceanPlane();
+    this.structureMetadataFromRef = new Map();
     this.generateBoard(this.currBoardLength, this.currBoardWidth);
     this.hideStructureGhosts();
   }
 
   private hideStructureGhosts() {
-    if (this.selectedObjMeta && this.selectedObjMeta.instantiated === false) {
-      if (this.selectedObjMeta.type === StructureType.CITY) {
+    if (this.selectedStructureMeta && this.selectedStructureMeta.instantiated === false) {
+      if (this.selectedStructureMeta.type === StructureType.CITY) {
         this.setSelectedStructureType(StructureType.SETTLEMENT);
       }
-      this.resetSelectedObj();
+      this.resetSelectedStructure();
     }
-    this.structureMetadata.forEach((metadata, mesh) => {
+    this.structureMetadataFromRef.forEach((metadata, mesh) => {
       if (!metadata.instantiated) {
         mesh.traverse((child) => {
           if (child instanceof THREE.Mesh) {
@@ -446,7 +514,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private showStructureGhosts() {
-    this.structureMetadata.forEach((metadata, mesh) => {
+    this.structureMetadataFromRef.forEach((metadata, mesh) => {
       if (!metadata.instantiated) {
         mesh.traverse((child) => {
           if (child instanceof THREE.Mesh) {
@@ -497,10 +565,8 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       }
 
       // Create Structure Ghosts for each tile
-      this.hexRefs.forEach((yPosMap, xCoord) => {
-        yPosMap.forEach((tileRef, yCoord) => {
-          this.createStructureGhosts(xCoord, yCoord);
-        })
+      this.hexMetadataFromRef.forEach((metadata) => {
+        this.createStructureGhosts(metadata.x, metadata.y);
       });
 
       let totalHarborNum = 1 + (width * 2);
@@ -616,7 +682,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     resourceArray = CatanHelperService.shuffle(resourceArray);
 
     // Create the array of token numbers.
-    let tokenNums = CatanHelperService.getTokenNumbers();
+    let tokenNums = CatanHelperService.getTokenNumbersByProbability();
     let tokenArray: any[] = [];
     let eachTokenNum = Math.floor(numTiles / tokenNums.length);
     tokenNums.forEach((num: number) => {
@@ -659,48 +725,65 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   private createTile(hexType: HexType, resourceNumber: number | undefined,
                      xCoord: number, yCoord: number): void {
     let refName = "hex_" + HexType[hexType];
-    if (!this.assetRefs["loaded"] || !this.assetRefs[refName]) {
+    if (!this.geomRefs.get("hex") && this.materialRefs.get(refName)) {
       console.log("Asset type: " + refName + " not loaded!");
       return;
     }
     let position = CatanHelperService.calculateTilePosition(xCoord, yCoord);
-    const newTile = this.assetRefs[refName].clone();
+    const newTile = new THREE.Mesh(this.geomRefs.get("hex"), this.materialRefs.get(refName));
     // Don't allow change in the yCoordinate, which would be vertical.
     newTile.position.set(position.x, 0, position.y);
-    if (!this.hexRefs.get(xCoord)) {
-      this.hexRefs.set(xCoord, new Map());
+    if (!this.hexMetadataFromCoords.get(xCoord)) {
+      this.hexMetadataFromCoords.set(xCoord, new Map());
     }
-    this.hexRefs.get(xCoord)!.set(yCoord, {tile: newTile});
-    this.hexMetadata.set(newTile, { x: xCoord, y: yCoord, instantiated: true, type: hexType});
-    let tileRef = this.hexRefs.get(xCoord)!.get(yCoord);
-    this.sceneManager.addToScene(newTile);
-
-    this.createToken(resourceNumber, position, tileRef);
+    let numberTokenRef: THREE.Group | undefined;
+    if (resourceNumber) {
+      numberTokenRef = this.createToken(resourceNumber, position);
+      this.sceneManager.addToScene(numberTokenRef);
+    }
     if (hexType === HexType.DESERT && this.robberRef) {
       this.placeRobber(xCoord, yCoord);
       this.sceneManager.addToScene(this.robberRef);
     }
+    let hexMeta: HexMetadata = { 
+      x: xCoord, y: yCoord, instantiated: true,
+      type: hexType, resourceNumber,
+      hexRef: newTile, numberTokenRef
+    }
+    this.hexMetadataFromCoords.get(xCoord)!.set(yCoord, hexMeta);
+    this.hexMetadataFromRef.set(newTile, hexMeta);
+    this.sceneManager.addToScene(newTile);
   }
 
-  private createToken(resourceNumber: number | undefined, coordinates: XYPair, tileRef: any) {
-    if (resourceNumber) {
-      if (!this.assetRefs["token_" + resourceNumber]) {
-        console.log("Asset type: token_" + resourceNumber + " not loaded!");
-        return;
-      }
-      const tokenBase = this.assetRefs["token_base"].clone();
-      const resourceToken = this.assetRefs["token_" + resourceNumber].clone();
-      const digitFactor = resourceNumber.toString().length;
-      resourceToken.position.set(
-        coordinates.x - (digitFactor * ScaleConstants.TOKEN_TEXT_SCALE),
-        0.5,
-        coordinates.y + (0.6 * ScaleConstants.TOKEN_TEXT_SCALE));
-      tokenBase.position.set(coordinates.x, 0.3, coordinates.y);
-      tileRef["token"] = resourceToken;
-      tileRef["token_base"] = tokenBase;
-      this.sceneManager.addToScene(resourceToken);
-      this.sceneManager.addToScene(tokenBase);
+  private removeTile(hexMeta: HexMetadata) {
+    if (hexMeta.harborRef) {
+      this.sceneManager.removeFromScene(hexMeta.harborRef);
     }
+    if (hexMeta.numberTokenRef) {
+      this.sceneManager.removeFromScene(hexMeta.numberTokenRef);
+    }
+    this.sceneManager.removeFromScene(hexMeta.hexRef);
+    this.hexMetadataFromCoords.get(hexMeta.x)!.delete(hexMeta.y);
+  }
+
+  private createToken(resourceNumber: number, coordinates: XYPair): THREE.Group {
+    if (!this.geomRefs.get("token_base") && this.geomRefs.get("token_text_" + resourceNumber)) {
+      console.log("Asset type: `token_base` or `token_text_" + resourceNumber + "` not loaded!");
+      return new THREE.Group();
+    }
+    const tokenBase: THREE.Mesh = new THREE.Mesh(this.geomRefs.get("token_base"), this.materialRefs.get("token_base"));
+    const tokenText: THREE.Mesh = new THREE.Mesh(this.geomRefs.get("token_text_" + resourceNumber),
+        (resourceNumber == 6 || resourceNumber == 8) ? this.materialRefs.get("token_text__red") : this.materialRefs.get("token_text"));
+    const digitFactor = resourceNumber.toString().length;
+    tokenText.position.set(
+      coordinates.x - (digitFactor * ScaleConstants.TOKEN_TEXT_SCALE),
+      0.5,
+      coordinates.y + (0.6 * ScaleConstants.TOKEN_TEXT_SCALE));
+    tokenBase.position.set(coordinates.x, 0.3, coordinates.y);
+    const completeToken = new THREE.Group();
+    completeToken.add(tokenBase);
+    completeToken.add(tokenText);
+    return completeToken;
   }
 
   private createHarbor(hexXCoord: number, hexYCoord: number,
@@ -710,16 +793,20 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       console.log("Attempted creation of harbor with no type specified");
       return;
     }
-    let refName = "harbor_" + harborType;
-    if (!this.assetRefs[refName]) {
-      console.log("Asset type: " + refName + " not loaded!");
+    let materialRef = "harbor_" + harborType;
+    if (!this.geomRefs.get("harbor") || !this.materialRefs.get(materialRef)) {
+      console.log("Geometry: `harbor` or Material: `" + materialRef + "` not loaded!");
       return;
     }
     let harborLocation = CatanHelperService.calculateEdgeLocation(hexXCoord, hexYCoord, cornerOffset, edgeOffset);
     let harborPosition = harborLocation.pos;
-    let harborRef = this.assetRefs[refName].clone();
+    let harborRef = new THREE.Mesh(this.geomRefs.get("harbor"), this.materialRefs.get(materialRef));
     harborRef.position.set(harborPosition.x, 0.3, harborPosition.y);
     harborRef.rotateY(harborPosition.rot);
+    let hexMeta = this.hexMetadataFromCoords.get(hexXCoord)!.get(hexYCoord);
+    hexMeta!.harborRef = harborRef;
+    hexMeta!.harborPosition = { corner: cornerOffset, edge: edgeOffset };
+    hexMeta!.harborType = harborType;
     this.sceneManager.addToScene(harborRef);
   }
 
@@ -749,35 +836,35 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.structureRefs.get(cornerXCoord)!.get(cornerYCoord)) {
       this.structureRefs.get(cornerXCoord)!.set(cornerYCoord, {ghosts: [], reals: []});
     }
-    let buildingRef = this.structureRefs.get(cornerXCoord)!.get(cornerYCoord);
+    let structureRef = this.structureRefs.get(cornerXCoord)!.get(cornerYCoord);
     let settlementPosition = CatanHelperService.calculateCornerPosition(hexXCoord, hexYCoord, cornerOffset);
     let settlementRef = new THREE.Mesh(
-      this.assetRefs["settlement_geom"], this.assetRefs["ghost_material"]);
+      this.geomRefs.get("settlement"), this.materialRefs.get("ghost"));
     settlementRef.position.set(settlementPosition.x, ScaleConstants.HEX_HEIGHT, settlementPosition.y);
-    buildingRef["corner_building"] = settlementRef;
-    this.structureMetadata.set(settlementRef, {x: cornerXCoord, y: cornerYCoord, instantiated: false, type: StructureType.SETTLEMENT, ownerId: 0});
-    buildingRef.ghosts.push(settlementRef);
+    structureRef["corner_building"] = settlementRef;
+    this.structureMetadataFromRef.set(settlementRef, {x: cornerXCoord, y: cornerYCoord, instantiated: false, type: StructureType.SETTLEMENT, ownerId: 0});
+    structureRef.ghosts.push(settlementRef);
     this.sceneManager.addToScene(settlementRef);
 
     let adjacentTiles = CatanHelperService.getAdjacentTileCoords(cornerXCoord, cornerYCoord);
     if ((cornerXCoord + cornerYCoord) % 2 === 0) {
       let upperLeft = adjacentTiles.get(HexOffset.UPPER_LEFT)!;
       let upperRight = adjacentTiles.get(HexOffset.UPPER_RIGHT)!;
-      if ((this.hexRefs.get(upperLeft.x) && this.hexRefs.get(upperLeft.x)!.get(upperLeft.y))
-          || (this.hexRefs.get(upperRight.x) && this.hexRefs.get(upperRight.x)!.get(upperRight.y))) {
-        this.createRoadGhost(buildingRef, hexXCoord, hexYCoord, cornerOffset, HexOffset.TOP);
+      if ((this.hexMetadataFromCoords.get(upperLeft.x) && this.hexMetadataFromCoords.get(upperLeft.x)!.get(upperLeft.y))
+          || (this.hexMetadataFromCoords.get(upperRight.x) && this.hexMetadataFromCoords.get(upperRight.x)!.get(upperRight.y))) {
+        this.createRoadGhost(structureRef, hexXCoord, hexYCoord, cornerOffset, HexOffset.TOP);
       }
     } else {
       let lowerLeft = adjacentTiles.get(HexOffset.LOWER_LEFT)!;
       let lowerRight = adjacentTiles.get(HexOffset.LOWER_RIGHT)!;
       let top = adjacentTiles.get(HexOffset.TOP)!;
-      if (this.hexRefs.get(top.x) &&
-        (this.hexRefs.get(top.x)!.get(top.y) || this.hexRefs.get(lowerLeft.x)!.get(lowerLeft.y))) {
-        this.createRoadGhost(buildingRef, hexXCoord, hexYCoord, cornerOffset, HexOffset.UPPER_LEFT);
+      if (this.hexMetadataFromCoords.get(top.x) &&
+        (this.hexMetadataFromCoords.get(top.x)!.get(top.y) || this.hexMetadataFromCoords.get(lowerLeft.x)!.get(lowerLeft.y))) {
+        this.createRoadGhost(structureRef, hexXCoord, hexYCoord, cornerOffset, HexOffset.UPPER_LEFT);
       }
-      if ((this.hexRefs.get(top.x) && this.hexRefs.get(top.x)!.get(top.y))
-          || (this.hexRefs.get(lowerRight.x) && this.hexRefs.get(lowerRight.x)!.get(lowerRight.y))) {
-        this.createRoadGhost(buildingRef, hexXCoord, hexYCoord, cornerOffset, HexOffset.UPPER_RIGHT);
+      if ((this.hexMetadataFromCoords.get(top.x) && this.hexMetadataFromCoords.get(top.x)!.get(top.y))
+          || (this.hexMetadataFromCoords.get(lowerRight.x) && this.hexMetadataFromCoords.get(lowerRight.x)!.get(lowerRight.y))) {
+        this.createRoadGhost(structureRef, hexXCoord, hexYCoord, cornerOffset, HexOffset.UPPER_RIGHT);
       }
     }
   }
@@ -787,24 +874,13 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     let roadPosition = roadLocation.pos;
     let roadCoords = roadLocation.coords;
     let roadRef = new THREE.Mesh(
-      this.assetRefs["road_geom"], this.assetRefs["ghost_material"]);
+      this.geomRefs.get("road"), this.materialRefs.get("ghost"));
     roadRef.position.set(roadPosition.x, 0.3, roadPosition.y);
     roadRef.rotateY(roadPosition.rot);
     buildingRef["road_" + edgeOffset] = roadRef;
     buildingRef.ghosts.push(roadRef);
-    this.structureMetadata.set(roadRef, {x: roadCoords.x, y: roadCoords.y, instantiated: false, type: StructureType.ROAD, ownerId: 0});
+    this.structureMetadataFromRef.set(roadRef, {x: roadCoords.x, y: roadCoords.y, instantiated: false, type: StructureType.ROAD, ownerId: 0});
     this.sceneManager.addToScene(roadRef);
-  }
-
-  private removeTile(xPosition: number, yPosition: number) {
-    if (this.hexRefs.get(xPosition) && this.hexRefs.get(xPosition)!.get(yPosition)) {
-      let obj = this.hexRefs.get(xPosition)!.get(yPosition);
-      for (let mesh in obj) {
-        if (obj.hasOwnProperty(mesh)) {
-          this.sceneManager.removeFromScene(obj[mesh]);
-        }
-      }
-    }
   }
 
   private toggleIntensiveAssets() {
@@ -866,17 +942,9 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.camera.position.set(this.cameraX, this.cameraY, this.cameraZ);
   }
 
-  private createOceanPlane() {
-    let oceanPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(ScaleConstants.INTERSECTION_PLANE_LIMIT, ScaleConstants.INTERSECTION_PLANE_LIMIT),
-      new THREE.MeshLambertMaterial({color: MaterialColors.OCEAN_PLANE}));
-    oceanPlane.rotateX(MathConstants.NEG_PI_OVER_2);
-    oceanPlane.translateY(-1 * ScaleConstants.HEX_HEIGHT);
-    this.sceneManager.addToScene(oceanPlane);
-  }
-
   private getAspectRatio() {
-    return this.canvas.clientWidth / this.canvas.clientHeight;
+    let ratio = this.canvas.width / this.canvas.height;
+    return ratio;
   }
 
   private initControls() {
@@ -919,7 +987,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   /* LOADERS */
 
   private loadAssets(): Observable<boolean> {
-    if (this.assetRefs["loaded"]) {
+    if (this.assetRefsLoaded) {
       return of(true);
     }
     return forkJoin([
@@ -930,7 +998,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     ]).pipe(map((bools: boolean[]) => {
       const errors = bools.indexOf(false) >= 0;
       if (!errors) {
-        this.assetRefs["loaded"] = true;
+        this.assetRefsLoaded = true;
       }
       return !errors;
     }));
@@ -939,12 +1007,12 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   private loadMaterials(): Observable<boolean> {
     const loadingComplete = new ReplaySubject<boolean>(1);
 
-    this.assetRefs["harbor_material"] = new THREE.MeshLambertMaterial(
-      {color: MaterialColors.DESERT_HEX});
-    this.assetRefs["ghost_material"] = new THREE.MeshLambertMaterial(
-      {transparent: true, opacity: 0.5, color: MaterialColors.GHOST_MATERIAL});
-    this.assetRefs["selected_material"] = new THREE.MeshLambertMaterial(
-      {emissive: 0x00ff00, color: MaterialColors.SELECTED_MATERIAL});
+    this.materialRefs.set("harbor_3:1", new THREE.MeshLambertMaterial(
+      {color: MaterialColors.getColorForHexType(HexType.DESERT)}));
+    this.materialRefs.set("ghost", new THREE.MeshLambertMaterial(
+      {transparent: true, opacity: 0.5, color: MaterialColors.GHOST_MATERIAL}));
+    this.materialRefs.set("selected", new THREE.MeshLambertMaterial(
+      {emissive: 0x00ff00, color: MaterialColors.SELECTED_MATERIAL}));
 
     loadingComplete.next(true);
     loadingComplete.complete();
@@ -953,10 +1021,9 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private loadHexes(): Observable<boolean> {
     const loadingComplete = new ReplaySubject<boolean>(1);
-    this.assetRefs["hex_geom"] = new THREE.CylinderGeometry(ScaleConstants.HEX_CORNER_RADIUS, 7.8, 0.5, 6);
+    this.geomRefs.set("hex", new THREE.CylinderGeometry(ScaleConstants.HEX_CORNER_RADIUS, 7.8, 0.5, 6));
     allHexTypes.forEach((type: HexType) => {
-      this.assetRefs["hex_" + type.toString()] = new THREE.Mesh(this.assetRefs["hex_geom"],
-        new THREE.MeshLambertMaterial({color: MaterialColors.getHexColor(type)}));
+      this.materialRefs.set("hex_" + type.toString(), new THREE.MeshLambertMaterial({color: MaterialColors.getColorForHexType(type)}));
     });
     loadingComplete.next(true);
     loadingComplete.complete();
@@ -968,14 +1035,20 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const loadingComplete = new Subject<boolean>();
     const fontLoader = new FontLoader();
-    this.assetRefs["token_base"] = new THREE.Mesh(
-      new THREE.CylinderGeometry(2, 2, 0.5, 16),
-      new THREE.MeshLambertMaterial({color: MaterialColors.TOKEN_BASE})
-    );
+    this.geomRefs.set("token_base", new THREE.CylinderGeometry(2, 2, 0.5, 16));
+    this.materialRefs.set("token_base", new THREE.MeshLambertMaterial({color: MaterialColors.TOKEN_BASE}));
     let tokenPipGeom = new THREE.CylinderGeometry(0.2, 0.2, 0.3, 5);
     fontLoader.load('./assets/fonts/gentilis_regular.typeface.json', (font: Font) => {
+      let newFont: any = {};
+      let glyphSet = new Set<string>(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+      for(let key in font.data.glyphs) {
+        if (glyphSet.has(key)) {
+          newFont[key] = font.data.glyphs[key];
+        }
+      };
+      console.log(JSON.stringify(newFont));
       // Create a token for each possible resource number
-      const resourceNumbers = CatanHelperService.getTokenNumbers().map((num: number) => {
+      const resourceNumbers = CatanHelperService.getTokenNumbersByProbability().map((num: number) => {
 
         let geometryArray: THREE.BufferGeometry[] = [];
         let numberGeometry = new THREE.ShapeGeometry(font.generateShapes(num.toString(), 9));
@@ -997,17 +1070,10 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         let totalGeometry: THREE.BufferGeometry = BufferGeometryUtils.mergeGeometries(geometryArray);
-
-        let totalMesh = new THREE.Mesh(
-          totalGeometry,
-          new THREE.MeshLambertMaterial({color: (num === 6 || num === 8)
-              ? MaterialColors.IMPORTANT_TOKEN_TEXT : MaterialColors.TOKEN_TEXT}));
-        
-        return [ num, totalMesh ];
+        this.geomRefs.set("token_text_" + num, totalGeometry);
       });
-      resourceNumbers.forEach(([num, mesh]) => {
-        this.assetRefs["token_" + num] = mesh;
-      });
+      this.materialRefs.set("token_text", new THREE.MeshLambertMaterial({ color: MaterialColors.TOKEN_TEXT }));
+      this.materialRefs.set("token_text__red", new THREE.MeshLambertMaterial({ color: MaterialColors.TOKEN_TEXT__RED }));
       loadingComplete.next(true);
       loadingComplete.complete();
     });
@@ -1031,14 +1097,12 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     harborGeom.rotateY(MathConstants.NEG_PI_OVER_2);
     harborGeom.rotateZ(MathConstants.NEG_PI_OVER_2);
     harborGeom.translate(0.3, -0.5, 0);
-    this.assetRefs["harbor_geom"] = harborGeom;
+    this.geomRefs.set("harbor", harborGeom);
 
     resourceHexTypes.forEach((type: HexType) => {
-      this.assetRefs["harbor_" + type] = new THREE.Mesh(this.assetRefs["harbor_geom"],
-        new THREE.MeshLambertMaterial({color: MaterialColors.getHexColor(type)}));
+      this.materialRefs.set("harbor_" + type, new THREE.MeshLambertMaterial({color: MaterialColors.getColorForHexType(type)}));
     });
-    this.assetRefs["harbor_3:1"] = new THREE.Mesh(this.assetRefs["harbor_geom"],
-      new THREE.MeshLambertMaterial({color:  MaterialColors.getHexColor(HexType.DESERT)}));
+    this.materialRefs.set("harbor_3:1", new THREE.MeshLambertMaterial({color:  MaterialColors.getColorForHexType(HexType.DESERT)}));
 
     let robberPts = [];
     robberPts.push( new THREE.Vector2(1, 0));
@@ -1072,7 +1136,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     let settlementGeom = new THREE.ExtrudeGeometry(
       settlementShape, { bevelEnabled: false, depth: 1.4 });
     settlementGeom.translate(0, -0.3, -0.6);
-    this.assetRefs["settlement_geom"] = settlementGeom;
+    this.geomRefs.set("settlement", settlementGeom);
 
     // City
     let cityPts = [];
@@ -1087,11 +1151,11 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     let cityGeom = new THREE.ExtrudeGeometry(
       cityShape, { bevelEnabled: false, depth: 1.4 });
     cityGeom.translate(0, -0.3, -0.5);
-    this.assetRefs["city_geom"] = cityGeom;
+    this.geomRefs.set("city", cityGeom);
 
 
     // Road
-    this.assetRefs["road_geom"] = new THREE.BoxGeometry(0.7, 0.9, 4);
+    this.geomRefs.set("road", new THREE.BoxGeometry(0.7, 0.9, 4));
 
     loadingComplete.next(true);
     loadingComplete.complete();
@@ -1100,34 +1164,35 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Adding these assets to the board state dramatically increases CPU/GPU usage.
   private loadIntensiveAssets(): Observable<boolean> {
-    if (this.assetRefs["intensive_loaded"]) {
-      return of(true);
-    }
-    const loadingComplete = new ReplaySubject<boolean>(1);
-    // Sheep
-    let sheepBodyGeom = new THREE.SphereGeometry(1, 8, 4);
-    let sheepHeadGeom = new THREE.LatheGeometry(
-      [new THREE.Vector2(0, 0.2), new THREE.Vector2(0.4, 0.8)],
-      2, 0, Math.PI);
-    sheepBodyGeom.scale(1.4, 1, 1);
-    sheepHeadGeom.rotateZ(Math.PI / 3);
-    sheepHeadGeom.translate(1.7, 0, 0);
-    let sheepBodyMaterial = new THREE.MeshLambertMaterial({ color: MaterialColors.SHEEP_BODY });
-    let sheepHeadMaterial = new THREE.MeshLambertMaterial({ color: MaterialColors.SHEEP_HEAD });
-    let sheepBody = new THREE.Mesh(sheepBodyGeom, sheepBodyMaterial);
-    let sheepHead = new THREE.Mesh(sheepHeadGeom, sheepHeadMaterial);
-    sheepBody.matrixAutoUpdate = false;
-    sheepBody.updateMatrix();
-    sheepHead.matrixAutoUpdate = false;
-    sheepHead.updateMatrix();
-    let sheepGroup = new THREE.Group();
-    sheepGroup.add(sheepBody);
-    sheepGroup.add(sheepHead);
-    sheepGroup.scale.set(0.1, 0.1, 0.1);
-    this.assetRefs["sheep"] = sheepGroup;
-    loadingComplete.next(true);
-    loadingComplete.complete();
-    this.assetRefs["intensive_loaded"] = true;
-    return loadingComplete;
+    return of(false);
+    // if (this.assetRefs["intensive_loaded"]) {
+    //   return of(true);
+    // }
+    // const loadingComplete = new ReplaySubject<boolean>(1);
+    // // Sheep
+    // let sheepBodyGeom = new THREE.SphereGeometry(1, 8, 4);
+    // let sheepHeadGeom = new THREE.LatheGeometry(
+    //   [new THREE.Vector2(0, 0.2), new THREE.Vector2(0.4, 0.8)],
+    //   2, 0, Math.PI);
+    // sheepBodyGeom.scale(1.4, 1, 1);
+    // sheepHeadGeom.rotateZ(Math.PI / 3);
+    // sheepHeadGeom.translate(1.7, 0, 0);
+    // let sheepBodyMaterial = new THREE.MeshLambertMaterial({ color: MaterialColors.SHEEP_BODY });
+    // let sheepHeadMaterial = new THREE.MeshLambertMaterial({ color: MaterialColors.SHEEP_HEAD });
+    // let sheepBody = new THREE.Mesh(sheepBodyGeom, sheepBodyMaterial);
+    // let sheepHead = new THREE.Mesh(sheepHeadGeom, sheepHeadMaterial);
+    // sheepBody.matrixAutoUpdate = false;
+    // sheepBody.updateMatrix();
+    // sheepHead.matrixAutoUpdate = false;
+    // sheepHead.updateMatrix();
+    // let sheepGroup = new THREE.Group();
+    // sheepGroup.add(sheepBody);
+    // sheepGroup.add(sheepHead);
+    // sheepGroup.scale.set(0.1, 0.1, 0.1);
+    // this.assetRefs["sheep"] = sheepGroup;
+    // loadingComplete.next(true);
+    // loadingComplete.complete();
+    // this.assetRefs["intensive_loaded"] = true;
+    // return loadingComplete;
   }
 }

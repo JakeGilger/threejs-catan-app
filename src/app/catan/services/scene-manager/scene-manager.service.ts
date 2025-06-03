@@ -1,10 +1,12 @@
-import { effect, inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
+import { combineLatest, filter, ReplaySubject } from 'rxjs';
+
 import * as THREE from "three";
+
 import { MathConstants } from "../../constants/MathConstants";
 import { ScaleConstants } from "../../constants/ScaleConstants";
 import { AppTheme, ThemeService } from '../theme/theme.service';
-import { P } from '@angular/cdk/platform.d-B3vREl3q';
-import { filter } from 'rxjs';
+import { MaterialColors } from '../../constants/MaterialColors';
 
 @Injectable({
   providedIn: 'root'
@@ -15,6 +17,8 @@ export class SceneManagerService {
 
   private scene!: THREE.Scene;
   private sceneUpdated: boolean;
+
+  private sceneResetObs = new ReplaySubject<boolean>(1);
 
   private daylights: THREE.Light[] = [
     new THREE.AmbientLight(0xffffff),
@@ -31,11 +35,12 @@ export class SceneManagerService {
   constructor() {
     this.resetScene();
     this.sceneUpdated = true;
-    this.themeService.selectedThemeObservable()
-    .pipe(
-      filter((theme) => { return theme !== undefined; })
-    ).subscribe((theme: AppTheme) => {
-      this.applyLighting((theme.name == 'dark') ? 'night' : 'day')
+    combineLatest([
+      this.themeService.selectedThemeObservable().pipe(
+        filter((theme) => { return theme !== undefined; })),
+      this.sceneResetObs
+    ]).subscribe((theme: [AppTheme, boolean]) => {
+      this.applyLighting((theme[0].name == 'dark') ? 'night' : 'day')
     })
   }
 
@@ -79,14 +84,22 @@ export class SceneManagerService {
 
   public resetScene() {
     this.scene = new THREE.Scene();
-    const intersectionPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(ScaleConstants.INTERSECTION_PLANE_LIMIT,
-        ScaleConstants.INTERSECTION_PLANE_LIMIT)
-    );
+
+    // Create Intersection Plane (Same position as ocean plane)\
+    const planeGeom = new THREE.PlaneGeometry(ScaleConstants.INTERSECTION_PLANE_LIMIT,
+        ScaleConstants.INTERSECTION_PLANE_LIMIT);
+    const intersectionPlane = new THREE.Mesh(planeGeom);
     intersectionPlane.rotateX(MathConstants.NEG_PI_OVER_2);
     intersectionPlane.position.setY(ScaleConstants.HEX_HEIGHT);
     intersectionPlane.matrixAutoUpdate = false;
     intersectionPlane.updateMatrix();
     this.INTERSECTION_PLANE = intersectionPlane;
+    this.sceneResetObs.next(true);
+
+    // Create Ocean Plane
+    let oceanPlane = new THREE.Mesh(planeGeom, new THREE.MeshLambertMaterial({color: MaterialColors.OCEAN_PLANE}));
+    oceanPlane.rotateX(MathConstants.NEG_PI_OVER_2);
+    oceanPlane.translateY(-1 * ScaleConstants.HEX_HEIGHT);
+    this.addToScene(oceanPlane);
   }
 }

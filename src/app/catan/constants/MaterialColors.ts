@@ -2,19 +2,19 @@ import { HexType } from "../enums/hex-type.enum";
 
 export class MaterialColors {
   [key: string]: number; // MaterialColors is indexable; not a new property
-  static readonly LUMBER_HEX = 0x336e14;
-  static readonly BRICK_HEX = 0x8f482b;
-  static readonly GRAIN_HEX = 0xa49940;
-  static readonly ORE_HEX = 0x353c3e;
-  static readonly WOOL_HEX = 0x4d8c2b;
-  static readonly DESERT_HEX = 0xCBBD93;
-  static readonly OCEAN_HEX = 0x1c86a5;
+  static readonly LUMBER = 0x336e14;
+  static readonly BRICK = 0x8f482b;
+  static readonly GRAIN = 0xa49940;
+  static readonly ORE = 0x353c3e;
+  static readonly WOOL = 0x4d8c2b;
+  static readonly DESERT = 0xCBBD93;
+  static readonly OCEAN = 0x1c86a5;
 
   static readonly OCEAN_PLANE = 0x207fba;
 
   static readonly TOKEN_BASE = 0xdddddd;
   static readonly TOKEN_TEXT = 0x222222;
-  static readonly IMPORTANT_TOKEN_TEXT = 0xff0000;
+  static readonly TOKEN_TEXT__RED = 0xff0000;
 
   static readonly ROBBER = 0x222222;
 
@@ -38,11 +38,10 @@ export class MaterialColors {
      MaterialColors.PLAYER_5, MaterialColors.PLAYER_6];
 
   static getPlayerColorStrings(colors: number[]): string[] {
-    return colors.map((hexInt: number) =>  '#' + ('000000' + hexInt.toString(16)).slice(-6));
+    return colors.map((hexInt: number) =>  '#' + hexInt.toString(16));
   }
 
-  static getHexColor(hexTypeString: HexType): number {
-    let propertyToAccess: string = hexTypeString + "_HEX";
-    return (MaterialColors as any)[propertyToAccess];
+  static getColorForHexType(hexType: HexType): number {
+    return (MaterialColors as any)[hexType];
   }
 }

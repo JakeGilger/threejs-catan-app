@@ -1,7 +1,6 @@
-import { Injectable } from "@angular/core";
+import { Injectable, signal, WritableSignal } from "@angular/core";
 import { MaterialColors } from "../../constants/MaterialColors";
 
-import { HexMetadata } from "../../interfaces/hex-metadata.interface";
 import { PlayerMetadata } from "../../interfaces/player-metadata";
 import { StructureMetadata } from "../../interfaces/structure-metadata.interface";
 
@@ -9,17 +8,17 @@ import { StructureMetadata } from "../../interfaces/structure-metadata.interface
   providedIn: 'root'
 })
 export class GameStateService {
-  public players: PlayerMetadata[];
+  public players: WritableSignal<PlayerMetadata[]> = signal<PlayerMetadata[]>([]);
   private structures: Set<StructureMetadata>;
 
   constructor() {
     // Sets default players to be those in a standard game of Catan.
-    this.players = this.getDefaultPlayers();
+    this.players.set(this.getDefaultPlayers());
     this.structures = new Set();
   }
 
   setPlayers(players: PlayerMetadata[]) {
-    this.players = players;
+    this.players.set(players);
   }
 
   getDefaultPlayers(): PlayerMetadata[] {

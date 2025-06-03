@@ -5,9 +5,8 @@ import { forkJoin } from "rxjs/internal/observable/forkJoin";
 import { map, take } from "rxjs/operators";
 
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { Font, FontLoader } from 'three/examples/jsm/loaders/FontLoader';
-import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { Font, FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import { mod } from "../../../helpers/js-modulo-fix";

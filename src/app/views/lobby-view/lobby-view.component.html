@@ -4,14 +4,15 @@
         <mat-card-header>
             <mat-card-title>Lobby ID: {{ lobbyId }}</mat-card-title>
         </mat-card-header>
+        <div>Note: Networking features currently not enabled. Catan can still be played locally with a set of cards.</div>
         <div class="lobby-view__player-container">
             @for (player of gameState.players(); track $index) {
             <mat-card class="lobby-view__player-card" [style.background-color]="player.color">
-                <mat-card-subtitle>Player: {{ player.id }}</mat-card-subtitle>
+                <mat-card-subtitle>Player {{ player.id }}</mat-card-subtitle>
             </mat-card>
         }
         </div>
-        <mat-checkbox>Ready</mat-checkbox>
+        <!-- <mat-checkbox>Ready</mat-checkbox> -->
         <button mat-flat-button (click)="startGame()">Start Game</button>
     </mat-card>
 </section>

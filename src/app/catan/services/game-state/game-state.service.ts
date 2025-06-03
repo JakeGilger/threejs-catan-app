@@ -24,7 +24,7 @@ export class GameStateService {
   getDefaultPlayers(): PlayerMetadata[] {
     return MaterialColors.getPlayerColorStrings(MaterialColors.DEFAULT_PLAYER_COLORS)
       .map((color: string, index: number) => {
-      return {id: index, color: color, structures: new Set()};
+      return {id: index + 1, color: color, structures: new Set()};
     });
   }
 

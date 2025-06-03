@@ -63,7 +63,7 @@ export class MenuViewComponent {
   createLobby(lobbyId: string | null | undefined) {
     if (!lobbyId || lobbyId == '') {
       // TODO: Generate a random short string
-      lobbyId = "TestLobby";
+      lobbyId = this.generateRandomString(5);
     }
     this.router.navigate(['/lobby'], {queryParams: { 'id': lobbyId }});
   }
@@ -73,5 +73,16 @@ export class MenuViewComponent {
     } else {
       this.router.navigate(['/lobby'], {queryParams: { 'id': this.lobbyForm.value.lobbyId }});
     }
+  }
+
+  private generateRandomString(stringLength: number): string {
+    const allowedChars: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let chars = '';
+
+    for (let i = 0; i < stringLength; i++) {
+      chars += allowedChars[Math.floor(Math.random() * allowedChars.length)];
+    }
+
+    return chars;
   }
 }

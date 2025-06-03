@@ -11,7 +11,7 @@
     <mat-card class="catan-board__submenu" *ngIf="gameMode !== ''">
       <div class="catan-board__edit-menu" *ngIf="gameMode === 'structure'">
         <h4><u>S</u>tructure Edit Mode</h4>
-        <div *ngIf="!selectedMesh">
+        <div *ngIf="!selectedMesh"  class="catan-board__edit-menu-text">
           Select a structure or ghost to see more options.
         </div>
         <div *ngIf="selectedMesh && selectedStructureMeta">
@@ -28,14 +28,14 @@
           <div *ngIf="structureTypeModifiables">
             <div>Structure:</div>
             <div class="catan-board__select-container">
-              <button type="button" *ngFor="let structureType of structureTypeModifiables"
+              <button mat-flat-button type="button" *ngFor="let structureType of structureTypeModifiables"
               (click)=setSelectedStructureType(structureType)>{{structureType}}</button>
             </div>
           </div>
-          <button (click)="instantiateSelectedObj()">
+          <button mat-flat-button (click)="instantiateSelectedObj()">
             {{ (selectedStructureMeta == undefined) ? "Confirm" : "Select a color to continue" }}
           </button>
-          <div>Click the current selection again to remove it.</div>
+          <div class="catan-board__edit-menu-text">Click the current selection again to remove it.</div>
         </div>
       </div>
       
@@ -49,7 +49,7 @@
           <button (click)="modifyLenWidth('wid', -1)">-</button>
           <button (click)="modifyLenWidth('wid', 1)">+</button>
         </div>
-        <button type="button" (click)="resetBoard()">Regenerate Board</button>
+        <button mat-flat-button type="button" (click)="resetBoard()">Regenerate Board</button>
         <div *ngIf="!selectedMesh">
           Select a hex to see more options.
         </div>

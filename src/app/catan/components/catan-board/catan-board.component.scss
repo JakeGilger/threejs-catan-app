@@ -46,14 +46,16 @@
 .catan-board__select-container {
   margin: 10px 0;
   @include flexbox();
-  @include flex-wrap(nowrap);
-  @include justify-content(space-around);
+  @include justify-content(space-between);
 }
 
 .catan-board__select-swatch {
-  border: black 1px solid;
-  width: 40px;
-  height: 20px;
+  flex-grow: 1;
+  text-align: center;
+  border: rgb(53, 53, 53) 1px solid;
+  border-radius: 0.5vh;
+  min-width: 2vh;
+  min-height: 2vh;
 }
 
 .catan-board__canvas {

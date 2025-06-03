@@ -1,0 +1,19 @@
+<mat-toolbar>
+  Catan
+  <div class="flex-stretch"></div>
+  <button mat-icon-button [mat-menu-trigger-for]="themeMenu">
+    <mat-icon>{{ themeService.selectedTheme()?.icon }}</mat-icon>
+  </button>
+  <mat-menu #themeMenu="matMenu">
+    @for (theme of themeService.getThemes(); track theme.name) {
+    <button
+      [class.selected-theme]="themeService.selectedTheme()?.name === theme.name"
+      mat-menu-item
+      (click)="themeService.setTheme(theme.name)"
+    >
+      <mat-icon>{{ theme.icon }}</mat-icon>
+      <span>{{ theme.name | titlecase }}</span>
+    </button>
+    }
+  </mat-menu>
+</mat-toolbar>

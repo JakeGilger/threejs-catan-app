@@ -1,14 +1,14 @@
 <div class="catan-board">
   <div class="catan-board__overlay">
-    <button class="catan-board__overlay-show-hide" (click)="showMenuButtons = !showMenuButtons">{{ showMenuButtons ? "Hide Menu" : "Show Menu"}}</button>
+    <button mat-flat-button class="catan-board__overlay-show-hide" (click)="showMenuButtons = !showMenuButtons">{{ showMenuButtons ? "Hide Menu" : "Show Menu"}}</button>
     <div class="catan-board__menu-buttons" *ngIf="showMenuButtons">
-      <button (click)="toggleGameMode('structure')">Structures</button>
-      <button (click)="toggleGameMode('board')">Board</button>
-      <button (click)="toggleGameMode('robber')">Robber</button>
-      <button (click)="toggleGameMode('dice')">Dice</button>
+      <button mat-flat-button (click)="toggleGameMode('structure')">Structures</button>
+      <button mat-flat-button (click)="toggleGameMode('board')">Board</button>
+      <button mat-flat-button (click)="toggleGameMode('robber')">Robber</button>
+      <button mat-flat-button (click)="toggleGameMode('dice')">Dice</button>
     </div>
     
-    <div class="catan-board__submenu" *ngIf="gameMode !== ''">
+    <mat-card class="catan-board__submenu" *ngIf="gameMode !== ''">
       <div class="catan-board__edit-menu" *ngIf="gameMode === 'structure'">
         <h4><u>S</u>tructure Edit Mode</h4>
         <div *ngIf="!selectedObj">
@@ -73,10 +73,10 @@
         <h4><u>D</u>ice Mode</h4>
         <ctn-catan-dice></ctn-catan-dice>
       </div>
-    </div>
+    </mat-card>
   </div>
   
-  <div class="catan-board__debug-overlay" *ngIf="debugEnabled">
+  <div class="catan-board__debug-overlay" *ngIf="debugWindowEnabled">
     <div *ngIf="mouse">Mouse Position:
       <div>x: {{ mouse.x }}</div>
       <div>y: {{ mouse.y }}</div>

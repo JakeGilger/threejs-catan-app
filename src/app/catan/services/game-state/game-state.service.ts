@@ -9,8 +9,8 @@ import { StructureMetadata } from "../../interfaces/structure-metadata.interface
   providedIn: 'root'
 })
 export class GameStateService {
+  public players: PlayerMetadata[];
   private structures: Set<StructureMetadata>;
-  players: PlayerMetadata[];
 
   constructor() {
     // Sets default players to be those in a standard game of Catan.

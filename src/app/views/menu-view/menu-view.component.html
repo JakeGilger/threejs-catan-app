@@ -1,5 +1,4 @@
-<section>
-  <h1>Catan</h1>
+<section class="menu-view">
   <div class="menu-view__alert" *ngIf="
         lobbyForm.get('lobbyId')?.touched &&
         lobbyForm.get('lobbyId')?.dirty &&
@@ -8,9 +7,9 @@
           LobbyId is required.
         </div>
   </div>
+  <h2>Create or Join Lobby</h2>
   <form [formGroup]="lobbyForm" (ngSubmit)="onSubmit()">
     <div>
-      <legend>Create or Join Lobby:</legend>
       <input formControlName="mode"
       type="radio" id="create" name="mode" value="Create" checked />
       <label for="create">Create</label>
@@ -19,9 +18,11 @@
       <label for="create">Join</label>
     </div>
     <div>
-      <label for="lobbyId">Lobby Id{{(lobbyForm.get('mode')?.value == 'Create') ? " (Optional)" : ""}}:</label>
-      <input id="lobbyId" type="text" formControlName="lobbyId"/>
-      <button type="submit" [disabled]="!lobbyForm.valid">{{ lobbyForm.get('mode')?.value }} Lobby</button>
+      <mat-form-field>
+        <label for="lobbyId">Lobby ID{{(lobbyForm.get('mode')?.value == 'Create') ? " (Optional)" : ""}}:</label>
+        <input matInput id="lobbyId" type="text" formControlName="lobbyId"/>
+      </mat-form-field>
     </div>
+    <button mat-flat-button type="submit" [disabled]="!lobbyForm.valid">{{ lobbyForm.get('mode')?.value }} Lobby</button>
   </form>
 </section>

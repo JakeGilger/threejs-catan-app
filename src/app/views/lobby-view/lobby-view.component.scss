@@ -1,0 +1,14 @@
+.lobby-view {
+    padding: 3vh;
+}
+
+.lobby-view__player-card {
+    padding: 1vh;
+}
+
+.lobby-view__player-container {
+    padding: 1vh;
+    display: flex;
+    flex-direction: row;
+    gap: 1vh;
+}

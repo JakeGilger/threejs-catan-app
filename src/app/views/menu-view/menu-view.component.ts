@@ -3,12 +3,19 @@ import { Component, inject } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
+import { MatButtonModule } from '@angular/material/button';
+import { MatInputModule } from '@angular/material/input';
+
 
 @Component({
     selector: 'ctn-menu-view',
+    standalone: true,
     templateUrl: './menu-view.component.html',
     styleUrls: ['./menu-view.component.scss'],
-    imports: [NgIf, ReactiveFormsModule]
+    imports: [NgIf, ReactiveFormsModule,
+      MatButtonModule,
+      MatInputModule
+    ]
 })
 export class MenuViewComponent {
 

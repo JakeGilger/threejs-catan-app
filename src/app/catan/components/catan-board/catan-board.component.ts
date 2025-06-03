@@ -1,5 +1,5 @@
 import { NgIf, NgFor } from '@angular/common';
-import { AfterViewInit, Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, HostListener, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Observable, of, ReplaySubject, Subject } from "rxjs";
 import { forkJoin } from "rxjs/internal/observable/forkJoin";
 import { map, take } from "rxjs/operators";
@@ -34,17 +34,26 @@ import { RenderService } from "../../services/render/render.service";
 import { XYPair } from '../../interfaces/xy-pair.interface';
 import { CatanDiceComponent } from '../catan-dice/catan-dice.component';
 
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { ThemeService } from '../../services/theme/theme.service';
+
 type GameMode =  'structure' | 'board' | 'robber' | 'dice' | '';
 
 @Component({
     selector: 'ctn-catan-board',
     standalone: true,
-    imports: [NgIf, NgFor, CatanDiceComponent],
+    imports: [NgIf, NgFor,
+      MatButtonModule,
+      MatCardModule,
+      CatanDiceComponent],
     providers: [GameStateService, CatanHelperService, RenderService, SceneManagerService],
     templateUrl: './catan-board.component.html',
     styleUrls: ['./catan-board.component.scss']
 })
 export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
+
+  public debugWindowEnabled: boolean = false;
 
   private robberRef!: THREE.Mesh;
 
@@ -68,8 +77,6 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   public currBoardWidth: number = 2;
 
   public showMenuButtons: boolean = false;
-
-  public debugEnabled: boolean = true;
 
   /* CANVAS PROPERTIES */
   public camera!: THREE.PerspectiveCamera;
@@ -110,6 +117,8 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   public nearClippingPane: number = 0.1;
 
   public farClippingPane: number = 500;
+
+  private ThemeService = inject(ThemeService);
 
   constructor(public gameState: GameStateService,
     private catanHelper: CatanHelperService,
@@ -642,7 +651,6 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       resourceArray.push('3:1');
     }
     resourceArray = CatanHelperService.shuffle(resourceArray);
-    console.log(resourceArray);
     return resourceArray;
   }
 
@@ -862,7 +870,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   private createOceanPlane() {
     let oceanPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(ScaleConstants.INTERSECTION_PLANE_LIMIT, ScaleConstants.INTERSECTION_PLANE_LIMIT),
-      new THREE.MeshBasicMaterial({color: MaterialColors.OCEAN_PLANE}));
+      new THREE.MeshLambertMaterial({color: MaterialColors.OCEAN_PLANE}));
     oceanPlane.rotateX(MathConstants.NEG_PI_OVER_2);
     oceanPlane.translateY(-1 * ScaleConstants.HEX_HEIGHT);
     this.sceneManager.addToScene(oceanPlane);
@@ -985,7 +993,6 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
         let tokenPip;
         for (let i = 0; i < numPips; i++) {
           tokenPip = tokenPipGeom.clone();
-          console.log(tokenPip);
           tokenPip.translate(pipOffset + (ScaleConstants.TOKEN_PIP_DISTANCE * i), 0, 0.6);
           geometryArray.push(tokenPip);
         }
@@ -996,8 +1003,6 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
           totalGeometry,
           new THREE.MeshLambertMaterial({color: (num === 6 || num === 8)
               ? MaterialColors.IMPORTANT_TOKEN_TEXT : MaterialColors.TOKEN_TEXT}));
-        
-        console.log(totalGeometry);
         
         return [ num, totalMesh ];
       });

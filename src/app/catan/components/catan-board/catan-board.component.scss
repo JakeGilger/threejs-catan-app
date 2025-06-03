@@ -5,7 +5,7 @@
   overflow: hidden;
   font-size: 15px;
   list-style-type: none;
-  background: #87ceeb;
+  background: var(--mat-sys-on-primary);
 }
 
 .catan-board__overlay {
@@ -13,7 +13,6 @@
   padding: 1vh;
   border-radius: 1vh;
   position: absolute;
-  background-color: #87ceeb;
 }
 
 .catan-board__overlay-show-hide {
@@ -29,7 +28,6 @@
 
 .catan-board__menu-button {
   border-radius: 4px;
-  background-color: #fffaf0;
   cursor: pointer;
 }
 
@@ -42,7 +40,6 @@
 .catan-board__edit-menu {
   border-radius: 1vh;
   padding: 1vh;
-  background-color: #f5f5f5;
   max-width: 230px;
 }
 

@@ -1,5 +1,17 @@
-<section>
-    <h1>Catan Lobby</h1>
-    <div>Lobby Id: {{ lobbyId }}</div>
-    <button (click)="startGame()">Start Game</button>
+<section class="lobby-view">
+    <h2>Catan Lobby</h2>
+    <mat-card appearance="outlined">
+        <mat-card-header>
+            <mat-card-title>Lobby ID: {{ lobbyId }}</mat-card-title>
+        </mat-card-header>
+        <div class="lobby-view__player-container">
+            @for (player of gameState.players; track $index) {
+            <mat-card class="lobby-view__player-card" [style.background-color]="player.color">
+                <mat-card-subtitle>Player: {{ player.id }}</mat-card-subtitle>
+            </mat-card>
+        }
+        </div>
+        <mat-checkbox>Ready</mat-checkbox>
+        <button mat-flat-button (click)="startGame()">Start Game</button>
+    </mat-card>
 </section>

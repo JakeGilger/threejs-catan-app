@@ -3,7 +3,8 @@ import { CatanBoardComponent } from 'src/app/catan/components/catan-board/catan-
 
 @Component({
     selector: 'ctn-catan-view',
-    imports: [CatanBoardComponent],
+    standalone: true,
+    imports: [ CatanBoardComponent ],
     templateUrl: './catan-view.component.html',
     styleUrls: ['./catan-view.component.scss']
 })

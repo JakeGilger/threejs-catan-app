@@ -45,6 +45,6 @@ export class LobbyViewComponent implements OnInit {
   }
 
   startGame() {
-    this.router.navigate(["game"]);
+    this.router.navigate(["game"], {queryParams: { id: this.lobbyId }});
   }
 }

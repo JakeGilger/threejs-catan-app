@@ -123,6 +123,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   public ngOnDestroy() {
     this.ngUnsub.next();
     this.ngUnsub.complete();
+    this.sceneManager.resetScene();
   }
 
   /**

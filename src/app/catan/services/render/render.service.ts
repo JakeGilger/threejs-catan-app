@@ -1,7 +1,6 @@
-import { Injectable } from "@angular/core";
+import { inject, Injectable } from "@angular/core";
 import * as THREE from "three";
 import { CatanBoardComponent } from "../../components/catan-board/catan-board.component";
-import { CanvasDimensions } from "../../interfaces/canvas-dimensions.interface";
 import { SceneManagerService } from "../scene-manager/scene-manager.service";
 
 /**
@@ -14,20 +13,29 @@ import { SceneManagerService } from "../scene-manager/scene-manager.service";
 export class RenderService {
   // Set to true the view from the camera has been dirtied.
   // (Controls updated, canvas resized, etc.)
-  public viewDirty: boolean;
-  public renderer!: THREE.WebGLRenderer;
+  private viewDirty: boolean = false;
+  private renderer!: THREE.WebGLRenderer;
 
-  constructor(private sceneManager: SceneManagerService) {
-    this.viewDirty = false;
-  }
+  private sceneManager = inject(SceneManagerService);
 
-  public initRenderer(canvas: HTMLCanvasElement, canvasDimensions: CanvasDimensions) {
+  constructor() {}
+
+  public initRenderer(canvas: HTMLCanvasElement) {
+    const canvasDimensions = this.sceneManager.getCanvasDimensions(canvas);
+    if (!canvasDimensions) {
+      return;
+    }
     this.renderer = new THREE.WebGLRenderer({ alpha: true, canvas: canvas, antialias: true });
     this.renderer.setPixelRatio(devicePixelRatio);
     this.renderer.setSize(canvasDimensions.width, canvasDimensions.height);
   }
 
-  public updateSize(canvasDimensions: CanvasDimensions) {
+  public updateSize(canvas: HTMLCanvasElement) {
+    const canvasDimensions = this.sceneManager.getCanvasDimensions(canvas);
+    if (!canvasDimensions) {
+      return;
+    }
+    this.sceneManager.getCanvasDimensions(canvas);
     this.renderer.setSize(canvasDimensions.width, canvasDimensions.height);
     this.viewDirty = true;
   }
@@ -42,10 +50,9 @@ export class RenderService {
       component.setTime();
       if (component.intensiveAssetsEnabled) {
         component.animateMeshes();
-        component.castMouseToPlane();
       }
       if (renderSrv.needsRender(component)) {
-        renderSrv.renderer.render(sceneManager.getScene(), component.camera);
+        renderSrv.renderer.render(sceneManager.getScene(), sceneManager.getCamera());
       }
     }());
   }

@@ -18,7 +18,7 @@
           <h5>Structure Options:</h5>
           <div>Color:</div>
           <div class="catan-board__select-container">
-            @for (player of gameState.players(); track $index) {
+            @for (player of players; track $index) {
               <div
                 class="catan-board__select-swatch"
                 [style.background-color]="player.color"
@@ -95,13 +95,8 @@
   </div>
   
   <div class="catan-board__debug-overlay" *ngIf="debugWindowEnabled">
-    <div *ngIf="mouse">Mouse Position:
-      <div>x: {{ mouse.x }}</div>
-      <div>y: {{ mouse.y }}</div>
-    </div>
   </div>
   <canvas class="catan-board__canvas"
   #canvas
-  (click)="onMouseClick($event)"
-  (mousemove)="onMouseMove($event)"></canvas>
+  (click)="onMouseClick($event)"></canvas>
 </div>

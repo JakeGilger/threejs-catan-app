@@ -12,7 +12,8 @@ import { MatInputModule } from '@angular/material/input';
     standalone: true,
     templateUrl: './menu-view.component.html',
     styleUrls: ['./menu-view.component.scss'],
-    imports: [NgIf, ReactiveFormsModule,
+    imports: [
+      NgIf, ReactiveFormsModule,
       MatButtonModule,
       MatInputModule
     ]
@@ -65,13 +66,13 @@ export class MenuViewComponent {
       // TODO: Generate a random short string
       lobbyId = this.generateRandomString(5);
     }
-    this.router.navigate(['/lobby'], {queryParams: { 'id': lobbyId }});
+    this.router.navigate(['/lobby', lobbyId]);
   }
 
   joinLobby(lobbyId: string | null | undefined) {
     if (!lobbyId) {
     } else {
-      this.router.navigate(['/lobby'], {queryParams: { 'id': this.lobbyForm.value.lobbyId }});
+      this.router.navigate(['/lobby', this.lobbyForm.value.lobbyId]);
     }
   }
 

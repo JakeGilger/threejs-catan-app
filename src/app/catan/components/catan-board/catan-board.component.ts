@@ -2,7 +2,7 @@ import { NgIf, NgFor } from '@angular/common';
 import { AfterViewInit, Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, HostListener, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Observable, of, ReplaySubject, Subject } from "rxjs";
 import { forkJoin } from "rxjs/internal/observable/forkJoin";
-import { map, take } from "rxjs/operators";
+import { map, take, takeUntil } from "rxjs/operators";
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -20,7 +20,6 @@ import { allHexTypes, hexResourceTypes, HexType } from "../../enums/hex-type.enu
 import { HarborType, resourceHexTypes, ResourceType, resourceTypes } from "../../enums/resource-type.enum";
 import { StructureType, StructureTypeModifiables } from "../../enums/structure-type.enum";
 
-import { CanvasDimensions } from "../../interfaces/canvas-dimensions.interface";
 import { HexMetadata } from "../../interfaces/hex-metadata.interface";
 import { IntensiveAsset } from "../../interfaces/intensive-asset.interface";
 import { StructureMetadata } from "../../interfaces/structure-metadata.interface";
@@ -45,11 +44,16 @@ type GameMode =  'structure' | 'board' | 'robber' | 'dice' | '';
       MatButtonModule,
       MatCardModule,
       CatanDiceComponent],
-    providers: [GameStateService, CatanHelperService, RenderService, SceneManagerService],
     templateUrl: './catan-board.component.html',
     styleUrls: ['./catan-board.component.scss']
 })
 export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
+  private gameState = inject(GameStateService);
+  private render = inject(RenderService);
+  private sceneManager = inject(SceneManagerService);
+
+
+  private ngUnsub: Subject<void> = new Subject();
 
   public debugWindowEnabled: boolean = false;
 
@@ -83,19 +87,10 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public showMenuButtons: boolean = false;
 
-  /* CANVAS PROPERTIES */
-  public camera!: THREE.PerspectiveCamera;
-  private raycaster!: THREE.Raycaster;
-
-  public mouse!: THREE.Vector2;
-  private mouseChanged!: boolean;
-  private mouseOnPlane!: 0 | THREE.Vector3;
-
   public hexNumbers: number[] = CatanHelperService.getTokenNumbers();
   public allHexTypes: HexType[] = allHexTypes;
   public hexTypeColors: string[] = allHexTypes.map((type) => { return '#' + MaterialColors.getColorForHexType(type).toString(16)});
-
-  private ngUnsub: Subject<void> = new Subject();
+  public players: PlayerMetadata[] = [];
 
   private intensiveAssets: IntensiveAsset[] = [];
   public now: number = performance.now();
@@ -107,7 +102,6 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   private get canvas(): HTMLCanvasElement {
     return this.canvasRef.nativeElement;
   }
-  private canvasDimensions!: CanvasDimensions;
 
   public controls!: OrbitControls;
 
@@ -116,26 +110,14 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   // Leave disabled for devices that can't take the heat.
   public intensiveAssetsEnabled!: boolean;
 
-  /* DEFAULT CAMERA PROPERTIES */
-  public cameraX: number = 0;
-  public cameraY: number = 50;
-  public cameraZ: number = 50;
-
-  public fieldOfView: number = 70;
-
-  public nearClippingPane: number = 0.1;
-
-  public farClippingPane: number = 500;
-
-  constructor(
-    public gameState: GameStateService,
-    private render: RenderService,
-    private sceneManager: SceneManagerService) { }
-
   /* LIFECYCLE */
   public ngOnInit() {
     this.loadAssets().pipe(take(1))
-      .subscribe((complete) => {})
+      .subscribe((complete) => {});
+    this.gameState.getPlayers().pipe(takeUntil(this.ngUnsub))
+    .subscribe((players) => {
+      this.players = players;
+    })
   }
 
   public ngOnDestroy() {
@@ -148,9 +130,8 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
    * as we need the view dimensions for it. Controls also depend on camera.
    */
   public ngAfterViewInit() {
-    this.setCanvasDimensions();
-    this.createCamera();
-    this.render.initRenderer(this.canvas, this.canvasDimensions);
+    this.sceneManager.createCamera(this.canvas);
+    this.render.initRenderer(this.canvas);
     this.initControls();
     this.generateBoard(this.currBoardLength, this.currBoardWidth);
     this.render.startRenderLoop(this);
@@ -167,43 +148,16 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.resize();
   }
 
-  public onMouseMove(event: MouseEvent) {
-    if (this.intensiveAssetsEnabled) {
-      this.mouse.set(
-        (event.clientX / this.canvasDimensions.halfWidth) - 1,
-        -( event.clientY / this.canvasDimensions.halfHeight) + 1
-      );
-      this.mouseChanged = true;
-    }
-  }
-
   private resize() {
-    this.setCanvasDimensions();
-    this.camera.aspect = this.getAspectRatio();
-    this.camera.updateProjectionMatrix();
-
-    this.render.updateSize(this.canvasDimensions);
-  }
-
-  private setCanvasDimensions() {
-    if (this.canvas && this.canvas.parentElement) {
-      const containerHeight = this.canvas.parentElement.clientHeight;
-    const containerWidth = this.canvas.parentElement.clientWidth;
-    this.canvas.height = containerHeight;
-    this.canvas.width = containerWidth;
-    this.canvasDimensions = {
-      height: containerHeight, width: containerWidth,
-      halfHeight: containerHeight / 2, halfWidth: containerWidth / 2
-    };
-    } else {
-      console.log("Unable to find Canvas Dimensions!");
-    }
+    this.sceneManager.resize(this.canvas);
+    this.render.updateSize(this.canvas);
   }
 
   public onMouseClick(event: MouseEvent) {
     event.preventDefault();
     if (this.gameMode === 'structure') {
-      let intersects = this.raycast(event, Array.from(this.structureMetadataFromRef.keys()));
+      let intersects = this.sceneManager.raycast(
+        event, Array.from(this.structureMetadataFromRef.keys()), this.canvas);
 
       if ( intersects.length > 0 ) {
         if (this.selectedMesh !== intersects[0].object) {
@@ -241,7 +195,8 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       this.sceneManager.setSceneUpdated(true);
     }
     if (this.gameMode === 'robber' || this.gameMode === 'board') {
-      let intersects = this.raycast(event, Array.from(this.hexMetadataFromRef.keys()));
+      let intersects = this.sceneManager.raycast(
+        event, Array.from(this.hexMetadataFromRef.keys()), this.canvas);
 
       if ( intersects.length > 0 ) {
         // Get the mesh and metadata for selected hex
@@ -275,12 +230,6 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  private raycast(event: MouseEvent, objects: THREE.Object3D[]): THREE.Intersection[] {
-    this.mouse.set( ( event.clientX / this.canvas.clientWidth ) * 2 - 1, - ( event.clientY / this.canvas.clientHeight ) * 2 + 1 );
-    this.raycaster.setFromCamera( this.mouse, this.camera );
-    return this.raycaster.intersectObjects(objects);
-  }
-
   public modifyLenWidth(which: 'len'|'wid', amount: number) {
     if (which === 'len') {
       if (this.currBoardLength + amount > 0 && this.currBoardLength + amount > this.currBoardWidth) {
@@ -310,12 +259,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     if (ev.key === 'Enter') {
       this.instantiateSelectedObj();
     }
-    if (ev.keyCode >= 49 && ev.keyCode <= 52) {
-      this.setPlayerOfSelectedStructure(this.gameState.players()[Number(ev.key).valueOf() - 1]);
-    }
     if (ev.key === 'i') {
-      console.log(this.render.renderer.info);
-      console.log(this.camera.toJSON());
       console.log(this.intensiveAssets);
     }
     if (ev.key === 'p') {
@@ -929,27 +873,10 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       ScaleConstants.SHEEP_BOUNCE_HEIGHT * Math.abs(Math.sin((ScaleConstants.SHEEP_BOUNCE_PERIOD * time) +  self.deltaOffset)));
   }
 
-  private createCamera() {
-    /* Camera */
-    const aspectRatio = this.getAspectRatio();
-    this.camera = new THREE.PerspectiveCamera(
-      this.fieldOfView,
-      aspectRatio,
-      this.nearClippingPane,
-      this.farClippingPane
-    );
-    this.camera.position.set(this.cameraX, this.cameraY, this.cameraZ);
-  }
-
-  private getAspectRatio() {
-    let ratio = this.canvas.width / this.canvas.height;
-    return ratio;
-  }
-
   private initControls() {
     // helpful link for OrbitControls properties:
     // https://threejs.org/docs/#examples/controls/OrbitControls
-    this.controls = new OrbitControls(this.camera, this.render.getRenderer().domElement);
+    this.controls = new OrbitControls(this.sceneManager.getCamera(), this.render.getRenderer().domElement);
     // How far you can orbit vertically, upper and lower limits.
     this.controls.minPolarAngle = 0;
     this.controls.maxPolarAngle = (Math.PI * 4) / 9;
@@ -969,18 +896,6 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     // THREE.ScreenSpacePanning: 0
     // THREE.HorizontalPanning: 1
     this.controls.screenSpacePanning = false;
-
-    this.raycaster = new THREE.Raycaster();
-    this.mouse = new THREE.Vector2();
-  }
-
-  public castMouseToPlane() {
-    if (this.mouseChanged || this.render.viewDirty) {
-      this.raycaster.setFromCamera( this.mouse, this.camera );
-      const intersection = this.raycaster.intersectObject(this.sceneManager.INTERSECTION_PLANE);
-      this.mouseOnPlane = intersection.length && intersection[0] && intersection[0].point;
-      this.mouseChanged = false;
-    }
   }
 
   /* LOADERS */
@@ -1045,14 +960,6 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.materialRefs.set("token_base", new THREE.MeshLambertMaterial({color: MaterialColors.TOKEN_BASE}));
     let tokenPipGeom = new THREE.CylinderGeometry(0.2, 0.2, 0.3, 5);
     fontLoader.load('./assets/fonts/gentilis_regular.typeface.json', (font: Font) => {
-      let newFont: any = {};
-      let glyphSet = new Set<string>(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
-      for(let key in font.data.glyphs) {
-        if (glyphSet.has(key)) {
-          newFont[key] = font.data.glyphs[key];
-        }
-      };
-      console.log(JSON.stringify(newFont));
       // Create a token for each possible resource number
       const resourceNumbers = CatanHelperService.getTokenNumbersByProbability().map((num: number) => {
 
@@ -1201,4 +1108,13 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     // this.assetRefs["intensive_loaded"] = true;
     // return loadingComplete;
   }
+
+  // private castMouseToPlane() {
+  //   if (this.mouseChanged || this.render.viewDirty) {
+  //     this.raycaster.setFromCamera( this.mouse, this.camera );
+  //     const intersection = this.raycaster.intersectObject(this.sceneManager.INTERSECTION_PLANE);
+  //     this.mouseOnPlane = intersection.length && intersection[0] && intersection[0].point;
+  //     this.mouseChanged = false;
+  //   }
+  // }
 }

@@ -1,12 +1,13 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { ActivatedRoute, Params, Router } from '@angular/router';
-import { take } from 'rxjs';
+import { ActivatedRoute, ParamMap, Params, Router } from '@angular/router';
+import { Subject, take, takeUntil } from 'rxjs';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 
 import { GameStateService } from 'src/app/catan/services/game-state/game-state.service';
+import { PlayerMetadata } from 'src/app/catan/interfaces/player-metadata';
 
 @Component({
   selector: 'ctn-lobby-view',
@@ -20,31 +21,41 @@ import { GameStateService } from 'src/app/catan/services/game-state/game-state.s
   styleUrls: ['./lobby-view.component.scss']
 })
 export class LobbyViewComponent implements OnInit {
+  private ngUnsub: Subject<void> = new Subject();
 
-    lobbyId: string = '';
+  numPlayerSlots: number = 6;
 
-    protected gameState = inject(GameStateService);
-    private activatedRoute = inject(ActivatedRoute);
-    private router = inject(Router);
-
-    ngOnInit() {
-      this.activatedRoute.queryParams.pipe(take(1))
-      .subscribe((params: Params) => {
-        this.lobbyId = params["id"];
-      });
-      this.setNumPlayers(4);
-    }
-
-    setNumPlayers(numPlayers: number) {
-    if (numPlayers > 0 && numPlayers <= 6) {
-      let defaults = this.gameState.getDefaultPlayers();
-      this.gameState.setPlayers(defaults.slice(0, numPlayers));
-    } else {
-      console.log("Invalid player count.");
+  lobbyId: string | null = '';
+  players: PlayerMetadata[] = [];
+  
+  protected gameState = inject(GameStateService);
+  private activatedRoute = inject(ActivatedRoute);
+  private router = inject(Router);
+  
+  ngOnInit() {
+    this.activatedRoute.paramMap
+    .subscribe((params: ParamMap) => {
+      this.lobbyId = params.get("id");
+    });
+    this.players = this.gameState.getDefaultPlayers();
+  }
+  
+  
+  ngOnDestroy() {
+    this.ngUnsub.next();
+    this.ngUnsub.complete();
+  }
+  
+  setNumPlayers(numPlayers: number) {
+    this.numPlayerSlots = numPlayers;
+    let defaultPlayers = this.gameState.getDefaultPlayers();
+    if(numPlayers > 0 && numPlayers <= defaultPlayers.length) {
+      this.players = defaultPlayers.slice(0,numPlayers);
     }
   }
-
+  
   startGame() {
-    this.router.navigate(["game"], {queryParams: { id: this.lobbyId }});
+    this.gameState.setPlayers(this.players);
+    this.router.navigate(["game", this.lobbyId]);
   }
 }

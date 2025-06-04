@@ -1,24 +1,30 @@
-import { Injectable, signal, WritableSignal } from "@angular/core";
+import { Injectable } from "@angular/core";
 import { MaterialColors } from "../../constants/MaterialColors";
 
 import { PlayerMetadata } from "../../interfaces/player-metadata";
 import { StructureMetadata } from "../../interfaces/structure-metadata.interface";
+import { Observable, ReplaySubject, Subject } from "rxjs";
 
 @Injectable({
   providedIn: 'root'
 })
 export class GameStateService {
-  public players: WritableSignal<PlayerMetadata[]> = signal<PlayerMetadata[]>([]);
-  private structures: Set<StructureMetadata>;
+  private players: Subject<PlayerMetadata[]> = new ReplaySubject<PlayerMetadata[]>(1);
+  private structures: Set<StructureMetadata> = new Set<StructureMetadata>();
 
   constructor() {
+    console.log("running service constructor");
     // Sets default players to be those in a standard game of Catan.
-    this.players.set(this.getDefaultPlayers());
-    this.structures = new Set();
+    this.players.next(this.getDefaultPlayers());
+  }
+
+  getPlayers(): Observable<PlayerMetadata[]> {
+    return this.players.asObservable();
   }
 
   setPlayers(players: PlayerMetadata[]) {
-    this.players.set(players);
+    console.log("setting players to: " + JSON.stringify(players));
+    this.players.next(players);
   }
 
   getDefaultPlayers(): PlayerMetadata[] {

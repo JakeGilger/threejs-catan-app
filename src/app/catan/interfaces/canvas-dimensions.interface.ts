@@ -3,6 +3,6 @@ export interface CanvasDimensions {
   width: number;
   height: number;
   /* For quicker mousemove events. */
-  halfWidth: number;
-  halfHeight: number;
+  // halfWidth: number;
+  // halfHeight: number;
 }

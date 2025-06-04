@@ -6,11 +6,17 @@ import { LobbyViewComponent } from './views/lobby-view/lobby-view.component';
 export const routes: Routes = [
   {
     path: 'game',
-    component: CatanViewComponent
+    children: [{
+      path: ':id',
+      component: CatanViewComponent
+    }]
   },
   {
     path: 'lobby',
-    component: LobbyViewComponent
+    children: [{
+      path: ':id',
+      component: LobbyViewComponent
+    }]
   },
   {
     path: 'menu',

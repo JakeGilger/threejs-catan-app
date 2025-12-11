@@ -329,9 +329,61 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public setHexResource(hexMeta: HexMetadata, hexType: HexType) {
-    // hexMeta.type = hexType;
-    console.warn("setting hex %s to type %s", hexMeta, hexType);
-    // TODO FINISH
+    // Update the metadata with the new hex type
+    hexMeta.type = hexType;
+    
+    // Get the mesh reference from the metadata
+    const hexMesh = hexMeta.hexRef;
+    
+    // Get the new material name based on the hex type
+    const materialRefName = "hex_" + HexType[hexType];
+    const newMaterial = this.materialRefs.get(materialRefName);
+    
+    if (!newMaterial) {
+      console.warn("Material not found for hex type: " + materialRefName);
+      return;
+    }
+    
+    // Update the mesh's material
+    hexMesh.material = newMaterial;
+    
+    // Mark the scene as updated so it re-renders
+    this.sceneManager.setSceneUpdated(true);
+  }
+
+  public confirmHexChanges() {
+    if (this.selectedHexMeta && this.selectedMesh) {
+      // If only the number was changed (not the resource type), restore the original material
+      if (this.selectedHexPrevMeta && this.selectedHexPrevMeta.type === this.selectedHexMeta.type) {
+        this.selectedMesh.material = this.selectedHexPrevMaterial!;
+      }
+      // Clear the selection to persist the changes
+      this.clearSelectedObj();
+    }
+  }
+
+  public setHexNumber(hexMeta: HexMetadata, resourceNumber: number) {
+    // If the hex already has a number token, remove it
+    if (hexMeta.numberTokenRef) {
+      this.sceneManager.removeFromScene(hexMeta.numberTokenRef);
+      hexMeta.numberTokenRef = undefined;
+    }
+    
+    // Update the metadata with the new resource number
+    hexMeta.resourceNumber = resourceNumber;
+    
+    // Get the hex position from the metadata
+    const hexPosition = CatanHelperService.calculateTilePosition(hexMeta.x, hexMeta.y);
+    
+    // Create a new token with the new number
+    const newTokenRef = this.createToken(resourceNumber, hexPosition);
+    hexMeta.numberTokenRef = newTokenRef;
+    
+    // Add the new token to the scene
+    this.sceneManager.addToScene(newTokenRef);
+    
+    // Mark the scene as updated so it re-renders
+    this.sceneManager.setSceneUpdated(true);
   }
 
   public instantiateSelectedObj() {

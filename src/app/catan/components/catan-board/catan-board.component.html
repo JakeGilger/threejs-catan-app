@@ -75,9 +75,11 @@
             @for (hexNumber of hexNumbers; track $index) {
               <div
               class="catan-board__select-swatch"
+              (click)="setHexNumber(selectedHexMeta, hexNumber)"
               >{{ hexNumber }}</div>
             }
           </div>
+          <button mat-flat-button (click)="confirmHexChanges()">Confirm Changes</button>
           <div>Click the current selection again to deselect it.</div>
         </div>
       </div>

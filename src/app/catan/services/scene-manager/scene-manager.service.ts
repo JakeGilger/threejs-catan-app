@@ -167,10 +167,8 @@ export class SceneManagerService {
 
   public getCanvasDimensions(canvasRef: HTMLCanvasElement): CanvasDimensions | undefined {
     if (canvasRef && canvasRef.parentElement) {
-      const containerHeight = canvasRef.parentElement.clientHeight;
-      const containerWidth = canvasRef.parentElement.clientWidth;
-      canvasRef.height = containerHeight;
-      canvasRef.width = containerWidth;
+      const containerHeight =  canvasRef.clientHeight || canvasRef.parentElement.clientHeight;
+      const containerWidth = canvasRef.clientWidth || canvasRef.parentElement.clientWidth;
       return {
         height: containerHeight, width: containerWidth,
         // halfHeight: containerHeight / 2, halfWidth: containerWidth / 2

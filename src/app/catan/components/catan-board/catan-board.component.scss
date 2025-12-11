@@ -2,6 +2,8 @@
 
 .catan-board {
   max-height: 100vh;
+  height: 100vh;
+  width: 100vw;
   overflow: hidden;
   font-size: 15px;
   list-style-type: none;
@@ -59,8 +61,9 @@
 }
 
 .catan-board__canvas {
-  height: 100vh;
-  width: 100vh;
+  display: block;
+  height: 100%;
+  width: 100%;
 }
 
 .catan-board__debug-overlay {

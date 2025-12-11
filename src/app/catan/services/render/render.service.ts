@@ -26,8 +26,8 @@ export class RenderService {
       return;
     }
     this.renderer = new THREE.WebGLRenderer({ alpha: true, canvas: canvas, antialias: true });
-    this.renderer.setPixelRatio(devicePixelRatio);
-    this.renderer.setSize(canvasDimensions.width, canvasDimensions.height);
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.setSize(canvasDimensions.width, canvasDimensions.height, false);
   }
 
   public updateSize(canvas: HTMLCanvasElement) {
@@ -36,7 +36,15 @@ export class RenderService {
       return;
     }
     this.sceneManager.getCanvasDimensions(canvas);
-    this.renderer.setSize(canvasDimensions.width, canvasDimensions.height);
+
+    // Update renderer
+    this.renderer.setSize(canvasDimensions.width, canvasDimensions.height, false);
+
+    // Update camera aspect ratio on resize
+    const camera = this.sceneManager.getCamera() as THREE.PerspectiveCamera;
+    camera.aspect = canvasDimensions.width / canvasDimensions.height;
+    camera.updateProjectionMatrix();
+
     this.viewDirty = true;
   }
 

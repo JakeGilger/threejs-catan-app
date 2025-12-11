@@ -113,9 +113,9 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   /* LIFECYCLE */
   public ngOnInit() {
     this.loadAssets().pipe(take(1))
-      .subscribe((complete) => {});
+      .subscribe(() => {});
     this.gameState.getPlayers().pipe(takeUntil(this.ngUnsub))
-    .subscribe((players) => {
+    .subscribe((players: any) => {
       this.players = players;
     })
   }
@@ -447,7 +447,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     this.structureMetadataFromRef.forEach((metadata, mesh) => {
       if (!metadata.instantiated) {
-        mesh.traverse((child) => {
+        mesh.traverse((child: any) => {
           if (child instanceof THREE.Mesh) {
             child.visible = false;
           }
@@ -460,7 +460,7 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   private showStructureGhosts() {
     this.structureMetadataFromRef.forEach((metadata, mesh) => {
       if (!metadata.instantiated) {
-        mesh.traverse((child) => {
+        mesh.traverse((child: any) => {
           if (child instanceof THREE.Mesh) {
             child.visible = true;
           }
@@ -877,7 +877,8 @@ export class CatanBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   private initControls() {
     // helpful link for OrbitControls properties:
     // https://threejs.org/docs/#examples/controls/OrbitControls
-    this.controls = new OrbitControls(this.sceneManager.getCamera(), this.render.getRenderer().domElement);
+    this.controls = new OrbitControls(this.sceneManager.getCamera(),
+      this.render.getRenderer().domElement);
     // How far you can orbit vertically, upper and lower limits.
     this.controls.minPolarAngle = 0;
     this.controls.maxPolarAngle = (Math.PI * 4) / 9;
